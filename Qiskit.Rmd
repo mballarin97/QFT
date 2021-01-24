@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 
 # importing Qiskit
 from qiskit import QuantumCircuit, execute, Aer, IBMQ
+from qiskit.circuit import library as lb
 from qiskit.providers.ibmq import least_busy
 from qiskit.tools.monitor import job_monitor
 from qiskit.visualization import plot_histogram, plot_bloch_multivector
@@ -106,6 +107,59 @@ def inverse_QFT(circuit, n):
 qc = QuantumCircuit(6)
 QFT(qc, 6)
 qc.draw('mpl')
+```
+
+```{python}
+def cphase_swap(circuit, control, target, phase):
+    circuit.cp(phase, control, target)
+    circuit.swap(control, target)
+
+    
+def qft_circuit(circuit, n):
+    """
+    Apply the rotations needed for the QFT
+        Parameters:
+            circuit : quantum circuit
+            n       : int
+                number of qubits in @circuit
+    
+    """
+    if n == 0:
+        return circuit
+    elif n==1:
+        circuit.h(0)
+        return circuit
+    
+    circuit.h(0)
+    for i in range(n-1):
+        cphase_swap(circuit, i, i+1, 1/2**(i+1))
+        
+    return qft_circuit(circuit, n-1)
+
+```
+
+```{python}
+qc = QuantumCircuit(4, 4)
+qft_circuit(qc, 4)
+qc.measure(np.arange(0, 4), np.arange(0, 4))
+qc.draw('mpl')
+```
+
+```{python}
+# Select the QasmSimulator from the Aer provider
+simulator = Aer.get_backend('qasm_simulator')
+
+# Execute and get counts
+result = execute(qc, simulator).result()
+```
+
+```{python}
+counts = result.get_counts()
+plot_histogram(counts, title='Bell-State counts')
+```
+
+```{python}
+# execute?
 ```
 
 ```{python}
