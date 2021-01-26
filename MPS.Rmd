@@ -1,0 +1,392 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.2
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+#See https://ethz.ch/content/dam/ethz/special-interest/phys/theoretical-physics/cmtm-dam/documents/cqp/Lecture_12.pdf
+#for a nice introduction on MPS
+
+#The methods below follow the "multi-stage tensor decomposition" algorithm from T4.1 (https://www.tensors.net/p-tutorial-4)
+#applied to a MPS network, which looks like the one in the last figure of https://www.tensors.net/intro
+
+#the left-canonization means that the all the "left" tensors are chosen to be unitary, i.e. the rightmost tensor is the
+#center of orthogonality of the network (more below)
+```
+
+```{python}
+from ncon import ncon
+import numpy as np
+from numpy import linalg as LA
+```
+
+```{python}
+def to_full_MPS(dense_state, N, d=2):
+    """
+    Converts a @dense_state of a @N-body system made by @d-dimensional sites into a Matrix Product State 
+    in left-canonical form, with sufficiently sized bonds so that exactness is maintained.
+    
+    Parameters
+    ----------
+    dense_state : ndarray of shape (d^N,)
+        Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]*N) is the (i,j,k...) coefficient 
+        of the state in the computational basis.
+    N : integer > 0
+        Number of particles/sites
+    d : integer > 0
+        Local dimension of each particle/site. For a qubit, d=2.
+    
+    Returns
+    -------
+    List of @N tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
+    all the others are of order 3.
+    
+     U1 - U2 - U3 - ... - UN 
+     |    |    |          |
+     
+    The index ordering convention is from left-to-right. 
+    For instance, the "left" index of U2 is the first, the "bottom" one is the second, and the "right" one is the third.
+    """
+    
+    assert N > 0, "Number of sites must be > 0"
+    assert d > 0, "Local dimension must be > 0"
+    assert len(dense_state.flatten()) == d**N, "The dense_state must be of dimension d**N"
+    
+    state_tensor = dense_state.reshape([d] * N) #Reshape into a tensor of order N
+    MPS = []
+    
+    last_svd_dim = 1
+    for i in range(N-1):
+        U, S, Vh = LA.svd(state_tensor.reshape(last_svd_dim*d, d**(N-(i+1))), full_matrices=False)
+        
+        state_tensor = (np.diag(S) @ Vh)
+        
+        if i > 0: #first does not need reshaping
+            U = U.reshape(last_svd_dim, d, -1) #reshape to allow the contraction
+        
+        last_svd_dim = len(S)
+        MPS.append(U.copy())
+        
+        
+    MPS.append(state_tensor)
+        
+    return MPS
+```
+
+```{python}
+def to_dense(MPS):
+    """
+    Given a list of N tensors @MPS [U1, U2, ..., UN] , representing a Matrix Product State, perform the following contraction:
+     U1 - U2 - ... - UN
+      |    |          |
+    leading to a single tensor of order N, representing a dense state.
+    
+    The index ordering convention is from left-to-right. 
+    For instance, the "left" index of U2 is the first, the "bottom" one is the second, and the "right" one is the third.
+    
+    Parameters
+    ----------
+    MPS : list of ndarrays
+        List of tensors. First and last should be of order 2, all the others of order 3. 
+        The last dimension of MPS[i] should be the same of the first dimension of MPS[i+1], for all i.
+    
+    Returns
+    -------
+    ndarray of shape ([d] * N)
+    N-order tensor representing the dense state.
+    """
+    
+    #TODO add assertions
+    
+    N = len(MPS)
+    first_indices  = [-1, 1]
+    middle_indices = [[i, -(i+1), i+1] for i in range(1,N-1)]
+    last_indices   = [N-1, -N]
+    connect_list = [first_indices, *middle_indices, last_indices]
+    
+    return ncon(MPS, connect_list)
+```
+
+```{python}
+# Test for to_full_MPS
+N = 4
+d = 2
+sample_state = np.random.rand(d**N)
+MPS = to_full_MPS(sample_state, N, d)
+
+sample_tensor = sample_state.reshape([d] * N)
+
+diff = LA.norm(sample_tensor - to_dense(MPS)) / LA.norm(sample_tensor)
+
+assert np.isclose(diff, 0.), "Test not passed"
+print(f"Diff (norm): {diff}")
+print("PASSED!")
+```
+
+```{python}
+# Test for left-canonical form
+#Left-canonical means (if I understood correctly) that the rightmost site (MPS[-1]) is the center of orthogonality
+#That is, the following equality holds:
+# U1  -  U2  - ... - UN-1   - UN
+# |      |           |        |
+#U1.H - U2.H - ... - UN-1.H - UN.H
+# (==) 
+#  UN
+#  ||
+# UN.H
+#where .H denotes the Hermitian conjugate (\dagger), which is just .T for real matrices (our case).
+#In other words, all tensors to the left of UN contract to an identity, which is represented as a simple link. 
+#Note also that, since UN is a 2-order tensor, the bottom operation is just Tr(UN @ UN.H), where @ is matrix multiplication.
+
+#First, test that the contraction of all the left-tensors is an identity.
+#Convention is the following (idk if it's the most efficient...)
+#e.g. for N=4
+# U1 -2- U2 -5- U3 -8- U4 - (-1)
+# |1     |4     |7     |10
+# U1 -3- U2 -6- U3 -9- U4 - (-2)
+#Basically, the contracted indices follow the order of "diagonals" from the bottom-left to the top-right.
+#Start with the first connection, which links U1 to U1.H. Now the "top-right" is between U1 and U2.
+#Now restart from the next connection at the bottom, which links U1 and U2. Going to the "top-right" we see U2 - U2.H, and then
+#U2-U3, and so on.
+
+N = len(MPS)-1 #Number of tensors to be contracted (all except the rightmost one)
+#Read indices "by row"
+bottom_indices = 3 * (np.arange(N)+1)
+top_indices = bottom_indices - 1
+middle_indices = bottom_indices - 2
+
+#Free indices
+top_indices[-1] = -1
+bottom_indices[-1] = -2 
+
+top_connections = [[1,2]] + [[top_indices[i], middle_indices[i+1], top_indices[i+1]] for i in range(N-1)]
+bottom_connections = [[1,3]] + [[bottom_indices[i], middle_indices[i+1], bottom_indices[i+1]] for i in range(N-1)]
+
+ncon(MPS[:-1] + MPS[:-1], top_connections + bottom_connections) #this should be a dxd identity matrix
+#Here we work with Python lists, so the + is not elementwise addition, but concatenation of arrays!
+```
+
+```{python}
+#Let's do the full contraction of all tensors (TensorTrace(U1 U2 U3...))
+
+N = len(MPS)-1 #Number of tensors to be contracted (all except the rightmost one)
+#Read indices "by row"
+bottom_indices = 3 * (np.arange(N)+1)
+top_indices = bottom_indices - 1
+middle_indices = bottom_indices - 2
+
+#No free indices
+
+top_connections = [[1,2]] + [[top_indices[i], middle_indices[i+1], top_indices[i+1]] for i in range(N-1)]
+bottom_connections = [[1,3]] + [[bottom_indices[i], middle_indices[i+1], bottom_indices[i+1]] for i in range(N-1)]
+```
+
+```{python}
+#Add the final contraction
+last_index_bot = bottom_connections[-1][-1]
+last_index_top = top_connections[-1][-1]
+new_contraction_index = last_index_bot + 1
+full_bottom = bottom_connections + [[last_index_bot, new_contraction_index]]
+full_top = top_connections + [[last_index_top, new_contraction_index]]
+
+tensor_trace = ncon(MPS + MPS, full_top + full_bottom) #Trace obtained by contracting the whole tensor network
+
+manual_trace = np.trace(MPS[-1] @ MPS[-1].T) #Trace obtained by contracting just the center of orthogonality 
+#(i.e. the rightmost site)
+
+print(tensor_trace - manual_trace) #should be around machine precision (i.e. 0)
+```
+
+```{python}
+print(tensor_trace - np.trace(MPS[0] @ MPS[0].T)) #!= 0
+#Note that this does not work if we use another tensor (not the rightmost)
+#for the trace. This is because, by construction, we merged the singular values np.diag(S) always with the tensor
+#on the right. Thus, all the tensors on the left are unitary, but the rightmost is not!
+```
+
+```{python}
+#For example, U1 is unitary:
+MPS[0] @ MPS[0].T #Identity
+```
+
+## Compare with quimb method
+
+```{python}
+# #!pip install quimb
+# #!pip install autoray
+import quimb
+
+N = 4
+d = 2
+sample_state = np.random.rand(d**N)
+
+MPS_manual = to_full_MPS(sample_state, N, d)
+
+ket = quimb.qu(sample_state, qtype='ket') #convert to quimb format
+
+MPS_quimb = quimb.tensor.MatrixProductState.from_dense(ket, dims=[d]*N)
+
+#See https://quimb.readthedocs.io/en/latest/_autosummary/quimb.tensor.tensor_1d.html?highlight=left_canonize#quimb.tensor.tensor_1d.MatrixProductOperator
+#for the docs
+
+#Also https://quimb.readthedocs.io/en/master/tensor-algorithms.html
+```
+
+```{python}
+MPS_quimb.show() #Nice visualization
+```
+
+```{python}
+#left_canonize
+MPS_quimb.left_canonize()
+
+LA.norm(MPS_manual[-1] - MPS_quimb[-1].data) # often is 0, but sometimes not (see below)
+```
+
+```{python}
+#It turns out that often the two tensors are equal, but sometimes there are sign differences or more.
+
+#This can be explained since the left-canonical form does not fix completely the gauge of the tensor network
+#In fact, we can still consider unitary changes in the bonds. Consider a left-canonical MPS:
+
+# U1 - U2 - U3 - ... - [UN]
+# |    |    |           |
+
+#Let U be a unitary matrix. I can always insert it "in-between" a bond:
+# (U1 - U) - (U.H - U2) - ...
+#  |                |
+
+#Now, if I aggregate U1 and U, the resulting tensor is still unitary (because both U1 and U are unitary)
+#Same for U.H and U2. Thus, all the tensors are not 100% fixed by the gauge.
+```
+
+```{python}
+#Still the traces should always be the same!
+np.trace(MPS_quimb[-1].data @ np.conjugate(MPS_quimb[-1].data.T) )
+```
+
+```{python}
+np.trace(MPS_manual[-1] @ MPS_manual[-1].T) #should be the same as the result in the above cell
+```
+
+```{python}
+#Now, let's fix a maximum bond dimension chi:
+
+def to_approx_MPS(dense_state, N, d=2, chi=2):
+    """
+    Converts a @dense_state of a @N-body system made by @d-dimensional sites into a Matrix Product State 
+    in left-canonical form, with the size of links bounded by @chi.
+    
+    Parameters
+    ----------
+    dense_state : ndarray of shape (d^N,)
+        Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]*N) is the (i,j,k...) coefficient 
+        of the state in the computational basis.
+    N : integer > 0
+        Number of particles/sites
+    d : integer > 0
+        Local dimension of each particle/site. For a qubit, d=2.
+    chi : integer > 0
+        Maximum bond dimension
+    
+    Returns
+    -------
+    List of @N tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
+    all the others are of order 3.
+    
+     U1 - U2 - U3 - ... - UN 
+     |    |    |          |
+     
+    The index ordering convention is from left-to-right. 
+    For instance, the "left" index of U2 is the first, the "bottom" one is the second, and the "right" one is the third.
+    """
+    
+    assert N > 0, "Number of sites must be > 0"
+    assert d > 0, "Local dimension must be > 0"
+    assert len(dense_state.flatten()) == d**N, "The dense_state must be of dimension d**N"
+    
+    state_tensor = dense_state.reshape([d] * N) #Reshape into a tensor of order N
+    MPS = []
+    
+    last_svd_dim = 1
+    for i in range(N-1):
+        U, S, Vh = LA.svd(state_tensor.reshape(last_svd_dim * d, d**(N-(i+1))), full_matrices=False)
+        
+        #Truncation
+        U  = U[...,:chi]    #shape is (d...d,chi)
+        Vh = Vh[:chi, ...]  #shape is (chi, d...d)
+        state_tensor = (np.diag(S[:chi]) @ Vh)
+        
+        if i > 0: #first does not need reshaping
+            U = U.reshape(min(last_svd_dim, chi), d, -1) #reshape to allow the contraction
+            
+        MPS.append(U.copy())
+        
+        last_svd_dim = len(S) if len(S) < chi else chi
+        
+    MPS.append(state_tensor)
+        
+    return MPS
+```
+
+```{python}
+#Test precision with a random state
+
+import matplotlib.pyplot as plt
+
+N = 6
+d = 2
+sample_state = np.random.rand(d**N)
+
+chis = [2,3,4,5,6,7,8,9,10] 
+
+errors = []
+for chi in chis:
+    approx_MPS = to_approx_MPS(sample_state, N, d, chi)
+    errors.append(LA.norm(sample_state - to_dense(approx_MPS).flatten()))
+```
+
+```{python}
+plt.xlabel('$\chi$')
+plt.ylabel('Error')
+plt.plot(chis, errors)
+#note that for N=6 and d=2, the maximum bond dimension is 2^3 = 8
+#Like this: o-2-o-4-o-8-o-4-o-2-o
+#And in fact the error is minimum at chi = 8, and remains 0 afterwards!
+```
+
+```{python}
+#Let's try with a GHZ state. Since it can be written as a combination of only 2 separable states, we expect a chi=2 to suffice
+N = 6
+d = 2
+
+ghz_state = np.zeros(d**N)
+ghz_state[0] = 1
+ghz_state[-1] = 1
+
+chis = [1,2,3,4,5,6,7,8,9,10] 
+
+errors = []
+for chi in chis:
+    approx_MPS = to_approx_MPS(ghz_state, N, d, chi)
+    errors.append(LA.norm(ghz_state - to_dense(approx_MPS).flatten()))
+    
+plt.xlabel('$\chi$')
+plt.ylabel('Error')
+plt.plot(chis, errors)
+
+#Yay!
+```
+
+```{python}
+#TODO Add normalization
+```
