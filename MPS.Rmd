@@ -24,6 +24,13 @@ jupyter:
 ```
 
 ```{python}
+#Some other useful resources:
+#Examples of MPS (explains also the tensor notation as matrix of kets): https://physics.stackexchange.com/questions/266587/examples-of-matrix-product-states
+#Schmidt-SVD tutorial: https://physics.stackexchange.com/questions/251522/how-do-you-find-a-schmidt-basis-and-how-can-the-schmidt-decomposition-be-used-f/251574#251574
+
+```
+
+```{python}
 from ncon import ncon
 import numpy as np
 from numpy import linalg as LA
@@ -286,6 +293,8 @@ def to_approx_MPS(dense_state, N, d=2, chi=2):
     Converts a @dense_state of a @N-body system made by @d-dimensional sites into a Matrix Product State 
     in left-canonical form, with the size of links bounded by @chi.
     
+    
+    
     Parameters
     ----------
     dense_state : ndarray of shape (d^N,)
@@ -301,13 +310,24 @@ def to_approx_MPS(dense_state, N, d=2, chi=2):
     Returns
     -------
     List of @N tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
-    all the others are of order 3.
+    all the others are of order 3. The shapes are not fixed, but they are (a_i, d, a_{i+1}), with a_i, a_{i+1} <= chi 
+    for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries.
     
      U1 - U2 - U3 - ... - UN 
      |    |    |          |
      
     The index ordering convention is from left-to-right. 
     For instance, the "left" index of U2 is the first, the "bottom" one is the second, and the "right" one is the third.
+    
+    Examples
+    --------
+    For d=2, N=7 and chi=5, the tensor network is as follows:
+     U1 -2- U2 -4- U3 -5- U4 -5- U5 -4- U6 -2- U7
+     |      |      |      |      |      |      |
+    where -x- denotes the bounds' dimension (all the "bottom-facing" indices are of dimension d=2). Thus, the shapes
+    of the returned tensors are as follows:
+       U1       U2          U3         U4        U5         U6        U7
+    [(2, 2), (2, 2, 4), (4, 2, 5), (5, 2, 5), (5, 2, 4), (4, 2, 2), (2, 2)]
     """
     
     assert N > 0, "Number of sites must be > 0"
