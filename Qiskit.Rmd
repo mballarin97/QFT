@@ -113,7 +113,6 @@ qc.draw('mpl')
 def cphase_swap(circuit, control, target, phase):
     circuit.cp(phase, control, target)
     circuit.swap(control, target)
-
     
 def qft_circuit(circuit, n):
     """
@@ -140,9 +139,20 @@ def qft_circuit(circuit, n):
 
 ```{python}
 qc = QuantumCircuit(4, 4)
+qc.x(3)
 qft_circuit(qc, 4)
-qc.measure(np.arange(0, 4), np.arange(0, 4))
+#qc.measure(np.arange(0, 3), np.arange(0, 3))
 qc.draw('mpl')
+```
+
+```{python}
+simulator = Aer.get_backend('statevector_simulator')
+
+# Execute and get counts
+result = execute(qc, simulator).result()
+statevector = result.get_statevector(qc)
+#plot_state_city(statevector, title='Bell state')
+print(statevector)
 ```
 
 ```{python}
@@ -150,7 +160,7 @@ qc.draw('mpl')
 simulator = Aer.get_backend('qasm_simulator')
 
 # Execute and get counts
-result = execute(qc, simulator).result()
+result = execute(qc, simulator, shots=10000).result()
 ```
 
 ```{python}
