@@ -18,6 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numpy import linalg as LA
 from ncon import ncon
+import tenpy as tp
 
 # importing Qiskit
 from qiskit import QuantumCircuit, execute, Aer, IBMQ
@@ -73,6 +74,7 @@ def firstCS():
 
 ```{python}
 def apply_MPS_2q_gate(gate, state, q1, q2, s, stol=1e-7):
+    # Check dim of gate
     # Obtaining informations
     chi = state.shape[0]
     d = state.shape[1]
@@ -84,7 +86,7 @@ def apply_MPS_2q_gate(gate, state, q1, q2, s, stol=1e-7):
     s_curr = s[..., q1]
     # Apply gate to (q1, q2)
     temp = ncon( [ np.diag(s_left), state[..., q1], np.diag(s_curr), state[..., q2], np.diag(s_right), gate],
-                     [[-3, 1], [1 , 2, 3], [3, 4],  [4, 5, 6], [6, -4], [2, 5, -1 ,-2]] )
+                     [[-1, 1], [1 , 2, 3], [3, 4],  [4, 5, 6], [6, -4], [-2, -3, 2, 5]] )
     # SVD decomposition to come back to original structure
     nshape = (d*chi, d*chi)
     utemp, stemp, vhtemp = LA.svd( temp.reshape(nshape),
@@ -95,13 +97,26 @@ def apply_MPS_2q_gate(gate, state, q1, q2, s, stol=1e-7):
     vhtemp = vhtemp[range(chitemp), :].reshape(chitemp * d, chi )
     
     # remove environment weights to form new MPS tensors A and B
-    state[..., 0] = (np.diag(1 / s_left) @ utemp).reshape(s_left.shape[0], d, chitemp)
-    state[..., 1] = (vhtemp @ np.diag(1 / s_right)).reshape(chitemp, d, chi)
+    state[..., q1] = (np.diag(1 / s_left) @ utemp).reshape(s_left.shape[0], d, chitemp)
+    state[..., q2] = (vhtemp @ np.diag(1 / s_right)).reshape(chitemp, d, chi)
 
-    # new weights
+    # Truncation
     s_curr = stemp[range(chitemp)] / LA.norm(stemp[range(chitemp)])
     
-    return state[...,0:1], s_curr
+    return state[..., q1:q2], s_curr
+
+def apply_MPS_1q_gate(gate, state, q1, stol=1e-7):
+    # Check dim of gate
+    # Obtaining informations
+    chi = state.shape[0]
+    d = state.shape[1]
+
+    # Apply gate to (q1)
+    temp = ncon( [state[..., q1], gate],
+                     [ [-1 , 1, -3], [1, -2] ] )
+    state[..., q1] = temp
+    
+    return state[..., q1]
 ```
 
 ```{python}
@@ -125,37 +140,32 @@ def qft_circuit(state, sMPS, n):
         state, sMPS = apass(state, sMPS, i)
     
     H = lb.HGate().to_matrix()
-    IxH = np.kron( np.eye(2), H).reshape(2, 2, 2, 2)
-    state[..., 0:1], sMPS[...,0] = apply_MPS_2q_gate(IxH, state, n-2, n-1, sMPS)
+    state[..., n-1] = apply_MPS_1q_gate(H, state, n-1)
     
     return state, sMPS
 ```
 
 ```{python}
-def loc_density_MPS(A, sAB, B, sBA):
-    """ Compute the local reduced density matrices from an MPS (assumend to be
-    in canonical form)."""
+def from_statevect_to_MPS( statevec, n, chi=0, d=2):
+    """
+    statevec: ndarray
+    n: number of qubit
+    chi: bond dimension
+    d: dimension of local hilbert space
+    """
+    Us = []
+    #shape = [d]*n
+    #state_tens = statevec.reshape( shape )
+    
+    for i in range(n-1):
+        state_tens = state_tens.reshape(d, d**(n-1-i))
 
-    # recast singular weights into a matrix
-    mAB = np.diag(sAB)
-    mBA = np.diag(sBA)
-
-    # contract MPS for local reduced density matrix (A-B)
-    tensors = [np.diag(sBA**2), A, A.conj(), mAB, mAB, B, B.conj(),
-             np.diag(sBA**2)]
-    connects = [[3, 4], [3, -3, 1], [4, -1, 2], [1, 7], [2, 8], [7, -4, 5],
-              [8, -2, 6], [5, 6]]
-    rhoAB = ncon(tensors, connects)
-
-    # contract MPS for local reduced density matrix (B-A)
-    tensors = [np.diag(sAB**2), B, B.conj(), mBA, mBA, A, A.conj(),
-             np.diag(sAB**2)]
-    connects = [[3, 4], [3, -3, 1], [4, -1, 2], [1, 7], [2, 8], [7, -4, 5],
-              [8, -2, 6], [5, 6]]
-    rhoBA = ncon(tensors, connects)
-
-    return rhoAB, rhoBA
-
+        U, S, V1 = LA.svd( state_tens, full_matrices=False)
+        Us.append( U )
+        state_tens = np.diag(S)@V1
+        np.swapaxes(state_tens, 0, 1)
+        
+    return Us
 ```
 
 ```{python}
@@ -173,27 +183,57 @@ sMPS = np.tile(s, N)
 ```
 
 ```{python}
-
-```
-
-```{python}
 qft_state, sMPS = qft_circuit(MPS, sMPS, N)
 ```
 
 ```{python}
-qft_state
+np.real( qft_state[..., 3] )
+```
+
+```{python}
+# initialize tensors
+d = 2     # dim of qubit
+chi = 2  # order of mps matrix
+N = 2
+qubit = np.zeros( shape=(chi, d, chi, 1) , dtype=complex)
+qubit[0, 0, 0, 0] = 1
+s = np.ones(chi) / np.sqrt(chi)  # set trivial initial weights
+s = np.expand_dims(s, axis=1)
+
+MPS = np.tile(qubit, N)
+sMPS = np.tile(s, N)
+```
+
+```{python}
+H = lb.HGate().to_matrix()
+#CNOT = lb.CXGate().to_matrix()
+CNOT = np.array( [ [1, 0, 0, 0], 
+                   [0, 1, 0, 0], 
+                   [0, 0, 0, 1], 
+                   [0, 0, 1, 0], 
+                ] )
+Hx2 = np.kron(H, np.eye(2))
+bell = (CNOT@Hx2).reshape(2, 2, 2, 2)
+
+#bell = np.eye(4).reshape(2, 2, 2, 2)
+#bell = CNOT.reshape(2, 2, 2, 2)
+MPS[..., 0:1], sMPS[...,0] = apply_MPS_2q_gate(bell, MPS, 0, 1, sMPS)
+
+```
+
+```{python}
+y = np.zeros(4)
+MPS = np.real(MPS)
+y[0] = np.trace( MPS[:, 0, :, 0]@MPS[:, 0, :, 1] )
+y[1] = np.trace( MPS[:, 1, :, 0]@MPS[:, 0, :, 1] )
+y[2] = np.trace( MPS[:, 0, :, 0]@MPS[:, 1, :, 1] )
+y[3] = np.trace( MPS[:, 1, :, 0]@MPS[:, 1, :, 1] ) 
+y /= np.sqrt( np.sum(y**2) )
+print(y)
 ```
 
 ```{python}
 
-```
-
-```{python}
-MPS.shape
-```
-
-```{python}
-MPS[..., 3]
 ```
 
 ```{python}
