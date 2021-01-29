@@ -474,7 +474,8 @@ def right_contract(states):
 
     #print(top_connections, bottom_connections)
     
-    return ncon(states + states, top_connections + bottom_connections)
+    conj_states = [np.conjugate(s) for s in states]
+    return ncon(states + conj_states, top_connections + bottom_connections)
 
 def left_contract(states):
     """
@@ -517,7 +518,8 @@ def left_contract(states):
     top_connections = [[1,2]] + [[top_indices[i], middle_indices[i+1], top_indices[i+1]] for i in range(N-1)]
     bottom_connections = [[1,3]] + [[bottom_indices[i], middle_indices[i+1], bottom_indices[i+1]] for i in range(N-1)]
 
-    return ncon(states + states, top_connections + bottom_connections) 
+    conj_states = [np.conjugate(s) for s in states]
+    return ncon(states + conj_states, top_connections + bottom_connections) 
     #Here we work with Python lists, so the + is not elementwise addition, but concatenation of arrays!
     
 def print_state(dense_state):
@@ -532,11 +534,12 @@ def print_state(dense_state):
     
     ket = []
     for i, c in enumerate(dense_state):
-        if c != 0:
-            if np.isclose(c, 1.):
-                ket.append('|{}>'.format(binaries[i]))
-            elif np.isreal(c):
-                ket.append('{:.3f}|{}>'.format(np.real(c), binaries[i]))
+        if not np.isclose(np.abs(c), 0.):
+            if np.isclose(np.imag(c), 0.):
+                if np.isclose(np.real(c), 1.):
+                    ket.append('|{}>'.format(binaries[i]))
+                else:
+                    ket.append('{:.3f}|{}>'.format(np.real(c), binaries[i]))  
             else:
                 ket.append('{:.3f}|{}>'.format(c, binaries[i]))
     print(' + '.join(ket))
@@ -593,8 +596,8 @@ def apply_two_qubit_gate(gate_matrix, pos, state):
         eigenvec = eigenvec[:, mask]
 
         sqrt_eigenval = np.sqrt(abs(eigenval))
-        X = eigenvec @ np.diag(sqrt_eigenval) @ eigenvec.T
-        Xinv = eigenvec @ np.diag(1./sqrt_eigenval) @ eigenvec.T
+        X = eigenvec @ np.diag(sqrt_eigenval) @ np.conjugate(eigenvec.T)
+        Xinv = eigenvec @ np.diag(1./sqrt_eigenval) @ np.conjugate(eigenvec.T)
 
         #Absorb X and Xinv into the tensors
         gate_contraction_indices = [1, -2, -3, -4]
@@ -625,8 +628,8 @@ def apply_two_qubit_gate(gate_matrix, pos, state):
         eigenvec = eigenvec[:, mask]
 
         sqrt_eigenval = np.sqrt(abs(eigenval))
-        X = eigenvec @ np.diag(sqrt_eigenval) @ eigenvec.T
-        Xinv = eigenvec @ np.diag(1./sqrt_eigenval) @ eigenvec.T
+        X = eigenvec @ np.diag(sqrt_eigenval) @ np.conjugate(eigenvec.T)
+        Xinv = eigenvec @ np.diag(1./sqrt_eigenval) @ np.conjugate(eigenvec.T)
 
         #Absorb X and Xinv into the tensors
         gate_contraction_indices = [-1, -2, -3, 1]
@@ -733,11 +736,64 @@ print_state(state2)
 ```
 
 ```{python}
-#TODO: add np.conjugate to left/right_contract to allow gates/states with complex numbers 
-#(maybe it should be added even in other contractions... check!)
-#Check if normalization works as expected
-#Add truncation to fixed bond dimension chi.
-#Make a lot of tests!
+qu.swap()
+```
 
-#Implement QFT
+```{python}
+def cphase_and_swap(phase):
+    cphase = np.array(qu.controlled('z')) ** phase
+    swap = np.array(qu.swap())
+    
+    return swap @ cphase
+```
+
+```{python}
+def qft_circuit_swap(state, N):
+    """
+    Computes the QFT of a MPS @state with @N qubits.
+    """
+    
+    H = np.array(qu.hadamard())
+    for pos in range(N):
+        print("H(0)")
+        state = apply_one_qubit_gate(H, 0, state)
+        
+        for i in range(N-pos-1):
+            print(f"CZS(({i},{i+1}), {1/2**(i+1)})")
+            state = apply_two_qubit_gate(cphase_and_swap(1/2**(i+1)), i, state) #to (i, i+1)
+    
+    return state
+```
+
+```{python}
+N=2
+state = np.zeros(2**N)
+state[0] = 1
+state[-1] = 1
+state = state/np.sqrt(2)
+
+print("Initial state")
+print_state(state)
+state = to_full_MPS(state, d=2, N=N)
+```
+
+```{python}
+result = qft_circuit_swap(state, N)
+```
+
+```{python}
+result = to_dense(result).flatten()
+
+print("Result")
+print_state(result)
+```
+
+```{python}
+#TODO: add np.conjugate to left/right_contract to allow gates/states with complex numbers [OK]
+#(maybe it should be added even in other contractions... check!)
+#Check if normalization works as expected [Appears so, but more testing is needed]
+#Add truncation to fixed bond dimension chi. [TO DO] (And verify that the approximation is good)
+#Make a lot of tests! [TO DO]
+
+#Implement QFT [OK]
 ```
