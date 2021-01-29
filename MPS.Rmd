@@ -5,7 +5,7 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.2'
-      jupytext_version: 1.3.2
+      jupytext_version: 1.9.1
   kernelspec:
     display_name: Python 3
     language: python
@@ -409,4 +409,216 @@ plt.plot(chis, errors)
 
 ```{python}
 #TODO Add normalization
+```
+
+# Prepare application to MPS
+
+First we define the important matrices, the gates
+
+```{python}
+from qiskit.circuit import library as lb
+```
+
+```{python}
+global H, CNOT, SWAP 
+H = lb.HGate().to_matrix()
+CNOT = np.array( [ [1, 0, 0, 0], 
+                   [0, 1, 0, 0], 
+                   [0, 0, 0, 1], 
+                   [0, 0, 1, 0], 
+                ] )
+SWAP = lb.SwapGate().to_matrix()
+
+
+def CPHASE(phase): 
+    cp = np.array( [ [1, 0, 0, 0], 
+                     [0, 1, 0, 0], 
+                     [0, 0, 1, 0], 
+                     [0, 0, 0, np.exp(phase*1j)], 
+                    ] )
+    return cp
+
+def CS(phase):
+    temp = CPHASE(phase) @ SWAP
+    return temp
+
+def firstCS():
+    Cphase = CS(0.5)
+    Hx2 = np.kron(H, np.eye(2)) 
+    return ( Cphase@Hx2).reshape(2, 2, 2, 2)
+```
+
+```{python}
+def apply_MPS_2q_gate(gate, state, q1, q2, s, chi, stol=1e-7):
+    # Check dim of gate
+    # Obtaining informations
+    # chi = state.shape[0]
+    d = state.shape[1]
+    
+    s_left = s[..., q1-1]
+    s_left[s_left < stol] = stol
+    s_right= s[..., q1+1]
+    s_right[s_right < stol] = stol
+    s_curr = s[..., q1]
+    # Apply gate to (q1, q2)
+    temp = ncon( [ np.diag(s_left), state[..., q1], np.diag(s_curr), state[..., q2], np.diag(s_right), gate],
+                     [[-1, 1], [1 , 2, 3], [3, 4],  [4, 5, 6], [6, -4], [-2, -3, 2, 5]] )
+    # SVD decomposition to come back to original structure
+    nshape = (d*chi, d*chi)
+    utemp, stemp, vhtemp = LA.svd( temp.reshape(nshape),
+                                full_matrices=False)
+    # truncate to reduced dimension
+    chitemp = min(chi, len(stemp))
+    utemp = utemp[:, range(chitemp)].reshape( s_right.shape[0], d * chitemp)
+    vhtemp = vhtemp[range(chitemp), :].reshape(chitemp * d, chi )
+    
+    # remove environment weights to form new MPS tensors A and B
+    state[..., q1] = (np.diag(1 / s_left) @ utemp).reshape(s_left.shape[0], d, chitemp)
+    state[..., q2] = (vhtemp @ np.diag(1 / s_right)).reshape(chitemp, d, chi)
+
+    # Truncation
+    s_curr = stemp[range(chitemp)] / LA.norm(stemp[range(chitemp)])
+    
+    return state[..., q1:q2], s_curr
+
+def apply_MPS_1q_gate(gate, state, q1, stol=1e-7):
+
+    # Apply gate to (q1)
+    temp = ncon( [state[q1], gate],
+                     [ [-1 , 1, -3], [1, -2] ] )
+    state[q1] = temp
+    
+    return state[q1]
+
+def apply_MPS_1q_gate_bound(gate, state, q1, stol=1e-7):
+
+    # Apply gate to (q1)
+    temp = ncon( [state[q1], gate],
+                     [ [ 1, -2], [1, -1] ] )
+    state[q1] = temp
+    
+    return state[q1]
+
+def apass(state, sMPS, n):
+    chi = state.shape[0]
+    d = state.shape[1]
+    first_Gate = firstCS()
+    state[..., 0:1], sMPS[...,0] = apply_MPS_2q_gate(first_Gate, state, 0, 1, sMPS)
+
+    for i in range(1, n-1):
+        gate_to_app = CS(1/2**(i+1)).reshape(2, 2, 2, 2)
+        state[..., i:i+1], sMPS[...,0] = apply_MPS_2q_gate(gate_to_app, state, i, i+1, sMPS)
+    
+    return state, sMPS
+
+def qft_circuit(state, sMPS, n):
+    for i in range(n-1):
+        state, sMPS = apass(state, sMPS, i)
+    
+    H = lb.HGate().to_matrix()
+    state[..., n-1] = apply_MPS_1q_gate(H, state, n-1)
+    
+    return state, sMPS
+```
+
+```{python}
+def apply_MPS_2q_gate_left_bound(gate, state, q1, q2, s, chi, stol=1e-7):
+    # Check dim of gate
+    # Obtaining informations
+    # chi = state.shape[0]
+    d = state[0].shape[1]
+    start_chi = state[0].shape[0]
+    gate = gate.reshape(2,2,2,2)
+    
+    s_right= s[..., q1+1]
+    s_right[s_right < stol] = stol
+    s_curr = s[..., q1]
+    
+    # Apply gate to (q1, q2)
+    temp = ncon( [ state[q1], np.diag(s_curr), state[q2], np.diag(s_right), gate],
+                     [ [ 1, 2], [2, 3],  [3, 4, 5], [5, -3], [-1, -2, 1, 4]] )
+
+    # SVD decomposition to come back to original structure
+    nshape = (d, d*start_chi)
+    utemp, stemp, vhtemp = LA.svd( temp.reshape(nshape),
+                                full_matrices=False)
+    # truncate to reduced dimension
+    chitemp = min(chi, len(stemp))
+    utemp = utemp[:, range(chitemp)].reshape( s_right.shape[0], d )
+    vhtemp = vhtemp[range(chitemp), :].reshape( chi, d )
+    
+    # remove environment weights to form new MPS tensors A and B
+    state[q1] = utemp.reshape(d, chitemp)
+    state[q2] = (vhtemp @ np.diag(1 / s_right)).reshape(chitemp, d, chitemp)
+
+    # Truncation
+    s_curr = stemp[range(chitemp)] / LA.norm(stemp[range(chitemp)])
+    
+    return state[q1:q2], s_curr
+
+def apply_MPS_2q_gate(gate, state, q1, q2, s, chi, stol=1e-7):
+    # Check dim of gate
+    # Obtaining informations
+    # chi = state.shape[0]
+    d = state[0].shape[1]
+    start_chi = state[0].shape[0]
+    gate = gate.reshape(2,2,2,2)
+    
+    s_left = s[..., q1-1][:start_chi]
+    s_left[s_left < stol] = stol
+    s_right= s[..., q1+1][:start_chi]
+    s_right[s_right < stol] = stol
+    s_curr = s[..., q1]
+    # Apply gate to (q1, q2)
+    temp = ncon( [ np.diag(s_left), state[ q1], np.diag(s_curr), state[ q2], np.diag(s_right), gate],
+                     [[-1, 1], [1 , 2, 3], [3, 4],  [4, 5, 6], [6, -4], [-2, -3, 2, 5]] )
+    # SVD decomposition to come back to original structure
+    nshape = (d*start_chi, d*start_chi)
+    utemp, stemp, vhtemp = LA.svd( temp.reshape(nshape),
+                                full_matrices=False)
+    # truncate to reduced dimension
+    chitemp = min(chi, len(stemp))
+    utemp = utemp[:, range(chitemp)].reshape( s_right.shape[0], d * chitemp)
+    vhtemp = vhtemp[range(chitemp), :].reshape(start_chi * d, chi )
+    
+    # remove environment weights to form new MPS tensors A and B
+    state[ q1] = (np.diag(1 / s_left) @ utemp).reshape(s_left.shape[0], d, chitemp)
+    state[ q2] = (vhtemp @ np.diag(1 / s[..., q1+1])).reshape(chitemp, d, start_chi)
+
+    # Truncation
+    s_curr = stemp[range(chitemp)] / LA.norm( stemp[range(chitemp)] )
+    
+    return state[ q1:q2], s_curr
+```
+
+```{python}
+N=4
+chi = 4
+
+dense_state = np.zeros(d**N).reshape([2 for i in range(N)])
+dense_state[0, 0] = 1
+MPS = to_approx_MPS(dense_state, N=N, d=2, chi=chi)
+
+
+s = np.ones(N) / np.sqrt(chi)  # set trivial initial weights
+s = np.expand_dims(s, axis=1)
+sMPS = np.tile(s, N-1)
+```
+
+```{python}
+MPS[1] = apply_MPS_1q_gate(H, MPS, 1)
+MPS[1:2], sMPS[0] = apply_MPS_2q_gate(CNOT, MPS, 1, 2, sMPS, chi)
+```
+
+```{python}
+to_dense(MPS).reshape(1, 8)
+```
+
+000, 001, 010, 011, 100, 101, 110, 111 ->
+
+```{python}
+0-0-0
+| | |
+
+
 ```
