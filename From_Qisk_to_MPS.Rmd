@@ -1,0 +1,202 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.9.1
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+# Visualization
+import matplotlib.pyplot as plt
+
+# Numpy
+import numpy as np
+from numpy import linalg as LA
+
+# importing Qiskit
+from qiskit import QuantumCircuit, execute, Aer, IBMQ
+from qiskit.circuit import library as lb
+from qiskit.providers.ibmq import least_busy
+from qiskit.tools.monitor import job_monitor
+from qiskit.visualization import plot_histogram, plot_bloch_multivector
+# %config InlineBackend.figure_format = 'svg' # Makes the images look nice
+
+# Tensor networks
+import quimb as qu
+from ncon import ncon
+```
+
+```{python}
+def print_state(dense_state):
+    """
+    Prints a @dense_state with kets.
+    """
+    # quimb to_dense adaptation
+    if type( dense_state ) == quimb.core.qarray:
+        dense_state = [ pop[0] for pop in dense_state]    
+    
+    N = int(np.log2(len(dense_state)))
+    
+    binaries = [bin(i)[2:] for i in range(2**N)]
+    binaries = ['0'*(N-len(a)) + a for a in binaries] #Pad with 0s
+    
+    ket = []
+    for i, c in enumerate(dense_state):
+        if not np.isclose(np.abs(c), 0.):
+            if np.isclose(np.imag(c), 0.):
+                if np.isclose(np.real(c), 1.):
+                    ket.append('|{}>'.format(binaries[i]))
+                else:
+                    ket.append('{:.3f}|{}>'.format(np.real(c), binaries[i]))  
+            else:
+                ket.append('{:.3f}|{}>'.format(c, binaries[i]))
+    print(' + '.join(ket))
+```
+
+```{python}
+# Controlled phase shift
+def CPHASE(phi, dtype=complex, sparse=False):
+    """Construct a controlled phase gate for two qubits.
+
+    Parameters
+    ----------
+    phi : double
+        Angle of rotation.
+    sparse : bool, optional
+        Whether to construct a sparse operator.
+
+    Returns
+    -------
+    C : immutable operator
+        The controlled two-qubit gate operator.
+    """
+    ph = quimb.gen.operators.qu([[1., 0.],
+             [0., np.exp(1.0j * phi)]], dtype=dtype, sparse=sparse)
+    kws = {'dtype': dtype, 'sparse': sparse}
+    SWAP = quimb.gen.operators.swap()
+    
+    op = ((quimb.gen.operators.qu([1, 0], qtype='dop', **kws) & quimb.gen.operators.eye(2, **kws)) +
+          (quimb.gen.operators.qu([0, 1], qtype='dop', **kws) & ph))
+    quimb.gen.operators.make_immutable(op)
+    return op
+
+# Controlled NOT
+CNOT = quimb.controlled('not')
+
+# Hadamard
+H = quimb.gen.operators.hadamard()
+
+# SWAP
+SWAP = quimb.gen.operators.swap()
+# Dictionary of the gates
+
+gates = {'h': H, 
+        'cx': CNOT,
+        'cp': CPHASE,
+        'swap': SWAP}
+```
+
+```{python}
+def cphase_swap(circuit, control, target, phase):
+    circuit.cp(phase, control, target)
+    circuit.swap(control, target)
+    
+def qft_circuit(circuit, n):
+    """
+    Apply the rotations needed for the QFT
+        Parameters:
+            circuit : quantum circuit
+            n       : int
+                number of qubits in @circuit
+    
+    """
+    if n == 0:
+        return circuit
+    elif n==1:
+        circuit.h(0)
+        return circuit
+    
+    circuit.h(0)
+    for i in range(n-1):
+        cphase_swap(circuit, i, i+1, 1/2**(i+1))
+        
+    return qft_circuit(circuit, n-1)
+
+```
+
+```{python}
+n_qub = 4
+
+qc = QuantumCircuit(n_qub)
+qft_circuit(qc, n_qub)
+qc.draw('mpl')
+```
+
+```{python}
+class circ_data():
+    """ Class to contain the metadata of a qiskit quantum circuit
+
+    """
+    def __init__(self, circ):  
+        self.data = [ info for info in circ.data]
+        # Gates applied in order
+        self.gates = [ qub[0].name for qub in self.data ]
+        self.gates_params = [ qub[0].params for qub in self.data ]
+        # Indices of application of the gates
+        self.indeces = [ self._to_index( qub[1])  for qub in self.data  ]
+        # Number of qubits in the circuit
+        self.n_qub = circ.num_qubits
+        
+        
+    def _to_index(self, x):
+        return [ y.index for y in x ]
+```
+
+```{python}
+def MPS_circ(qc, gates=gates):
+    """ Function to transform a qiskit circuit @qc to a quimb MPS circuit, using the gates @gates
+        Parameters:
+            qc : QuantumCircuit
+            gates: dict qiskit_gate_name: quimb_gate
+            
+        TODO: add auto filling with swap gates if non-local gates are present
+    """
+    data = circ_data(qc)
+    
+    MPS = quimb.tensor.MPS_computational_state('0' * data.n_qub, tags = 'psi0')
+    
+    for gate_name, qub_idx, params in zip( data.gates, data.indeces, data.gates_params):
+        qubits = tuple(qub_idx)
+        if len(params)==0:
+            # Non parametric gates
+            MPS.gate_( gates[ gate_name ], qubits, tags=gate_name, contract=False) 
+        else:
+            # Parametric gates
+            MPS.gate_( gates[ gate_name ](*params), qubits, tags=gate_name, contract=False) 
+    
+    return MPS
+```
+
+```{python}
+psi0 = MPS_circ(qc)
+```
+
+```{python}
+psi0.graph(color=['cp', 'swap', 'h', 'psi0'], show_inds=True) #Plot the network
+```
+
+```{python}
+print_state(psi0.to_dense())
+```
+
+```{python}
+
+```
