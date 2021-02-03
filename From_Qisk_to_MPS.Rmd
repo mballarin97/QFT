@@ -30,7 +30,7 @@ from qiskit.visualization import plot_histogram, plot_bloch_multivector
 # %config InlineBackend.figure_format = 'svg' # Makes the images look nice
 
 # Tensor networks
-import quimb as qu
+import quimb as quimb
 from ncon import ncon
 ```
 
@@ -81,7 +81,6 @@ def CPHASE(phi, dtype=complex, sparse=False):
     ph = quimb.gen.operators.qu([[1., 0.],
              [0., np.exp(1.0j * phi)]], dtype=dtype, sparse=sparse)
     kws = {'dtype': dtype, 'sparse': sparse}
-    SWAP = quimb.gen.operators.swap()
     
     op = ((quimb.gen.operators.qu([1, 0], qtype='dop', **kws) & quimb.gen.operators.eye(2, **kws)) +
           (quimb.gen.operators.qu([0, 1], qtype='dop', **kws) & ph))
@@ -133,11 +132,11 @@ def qft_circuit(circuit, n):
 ```
 
 ```{python}
-n_qub = 4
+n_qub = 50
 
 qc = QuantumCircuit(n_qub)
 qft_circuit(qc, n_qub)
-qc.draw('mpl')
+#qc.draw('mpl')
 ```
 
 ```{python}
@@ -161,26 +160,32 @@ class circ_data():
 ```
 
 ```{python}
-def MPS_circ(qc, gates=gates):
+def MPS_circ(qc, init_state = None, gates=gates, chi=None):
     """ Function to transform a qiskit circuit @qc to a quimb MPS circuit, using the gates @gates
         Parameters:
-            qc : QuantumCircuit
-            gates: dict qiskit_gate_name: quimb_gate
+            qc         : QuantumCircuit
+            init_state : String containing the state in computational basis, i.e. '000' or '0011'
+                         If None starts from empty state '0'*num_qubits
+            gates      : dict qiskit_gate_name: quimb_gate
+            chi        : maximum bond dimension. If None it is automatically chosen.
             
         TODO: add auto filling with swap gates if non-local gates are present
     """
     data = circ_data(qc)
     
-    MPS = quimb.tensor.MPS_computational_state('0' * data.n_qub, tags = 'psi0')
+    if init_state == None:
+        init_state = '0' * data.n_qub
+    
+    MPS = quimb.tensor.MPS_computational_state(init_state, tags = 'psi0')
     
     for gate_name, qub_idx, params in zip( data.gates, data.indeces, data.gates_params):
         qubits = tuple(qub_idx)
         if len(params)==0:
             # Non parametric gates
-            MPS.gate_( gates[ gate_name ], qubits, tags=gate_name, contract=False) 
+            MPS.gate_( gates[ gate_name ], qubits, tags=gate_name, max_bond=chi, contract='split-gate') 
         else:
             # Parametric gates
-            MPS.gate_( gates[ gate_name ](*params), qubits, tags=gate_name, contract=False) 
+            MPS.gate_( gates[ gate_name ](*params), qubits, tags=gate_name, max_bond=chi, contract='split-gate') 
     
     return MPS
 ```
@@ -194,6 +199,29 @@ psi0.graph(color=['cp', 'swap', 'h', 'psi0'], show_inds=True) #Plot the network
 ```
 
 ```{python}
+print_state(psi0.to_dense())
+```
+
+# Test quimb bond dimension
+
+```{python}
+n_qub = 2
+
+qc = QuantumCircuit(n_qub)
+qc.h(0)
+qc.cx(0, 1)
+qc.draw('mpl')
+```
+
+```{python}
+quimb.tensor.tensor_core.tensor_split()
+```
+
+```{python}
+psi0 = quimb.tensor.MPS_computational_state('00', tags = 'psi0')
+psi0.gate_(H, 0, tags='h', max_bond=10, contract='split-gate')
+psi0.gate_(CNOT, (0, 1), tags='cx', max_bond=1, contract='split-gate')
+psi0.graph(color=['cx', 'h', 'psi0'], show_inds=True) #Plot the network
 print_state(psi0.to_dense())
 ```
 
