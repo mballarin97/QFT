@@ -5,7 +5,7 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.2'
-      jupytext_version: 1.3.2
+      jupytext_version: 1.9.1
   kernelspec:
     display_name: Python 3
     language: python
@@ -21,9 +21,7 @@ jupyter:
 
 #the left-canonization means that the all the "left" tensors are chosen to be unitary, i.e. the rightmost tensor is the
 #center of orthogonality of the network (more below)
-```
 
-```{python}
 #Some other useful resources:
 #Examples of MPS (explains also the tensor notation as matrix of kets): https://physics.stackexchange.com/questions/266587/examples-of-matrix-product-states
 #Schmidt-SVD tutorial: https://physics.stackexchange.com/questions/251522/how-do-you-find-a-schmidt-basis-and-how-can-the-schmidt-decomposition-be-used-f/251574#251574
@@ -34,7 +32,16 @@ jupyter:
 from ncon import ncon
 import numpy as np
 from numpy import linalg as LA
+import matplotlib.pyplot as plt
+
+import quimb
+
+from copy import deepcopy
+
+from helper import print_state
 ```
+
+## Convert between MPS and dense 
 
 ```{python}
 def to_full_MPS(dense_state, N, d=2):
@@ -87,9 +94,7 @@ def to_full_MPS(dense_state, N, d=2):
     MPS.append(state_tensor)
         
     return MPS
-```
 
-```{python}
 def to_dense(MPS):
     """
     Given a list of N tensors @MPS [U1, U2, ..., UN] , representing a Matrix Product State, perform the following contraction:
@@ -121,7 +126,80 @@ def to_dense(MPS):
     connect_list = [first_indices, *middle_indices, last_indices]
     
     return ncon(MPS, connect_list)
+
+#Now, let's fix a maximum bond dimension chi:
+
+def to_approx_MPS(dense_state, N, d=2, chi=2):
+    """
+    Converts a @dense_state of a @N-body system made by @d-dimensional sites into a Matrix Product State 
+    in left-canonical form, with the size of links bounded by @chi.
+    
+    
+    
+    Parameters
+    ----------
+    dense_state : ndarray of shape (d^N,)
+        Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]*N) is the (i,j,k...) coefficient 
+        of the state in the computational basis.
+    N : integer > 0
+        Number of particles/sites
+    d : integer > 0
+        Local dimension of each particle/site. For a qubit, d=2.
+    chi : integer > 0
+        Maximum bond dimension
+    
+    Returns
+    -------
+    List of @N tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
+    all the others are of order 3. The shapes are not fixed, but they are (a_i, d, a_{i+1}), with a_i, a_{i+1} <= chi 
+    for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries.
+    
+     U1 - U2 - U3 - ... - UN 
+     |    |    |          |
+     
+    The index ordering convention is from left-to-right. 
+    For instance, the "left" index of U2 is the first, the "bottom" one is the second, and the "right" one is the third.
+    
+    Examples
+    --------
+    For d=2, N=7 and chi=5, the tensor network is as follows:
+     U1 -2- U2 -4- U3 -5- U4 -5- U5 -4- U6 -2- U7
+     |      |      |      |      |      |      |
+    where -x- denotes the bounds' dimension (all the "bottom-facing" indices are of dimension d=2). Thus, the shapes
+    of the returned tensors are as follows:
+       U1       U2          U3         U4        U5         U6        U7
+    [(2, 2), (2, 2, 4), (4, 2, 5), (5, 2, 5), (5, 2, 4), (4, 2, 2), (2, 2)]
+    """
+    
+    assert N > 0, "Number of sites must be > 0"
+    assert d > 0, "Local dimension must be > 0"
+    assert len(dense_state.flatten()) == d**N, "The dense_state must be of dimension d**N"
+    
+    state_tensor = dense_state.reshape([d] * N) #Reshape into a tensor of order N
+    MPS = []
+    
+    last_svd_dim = 1
+    for i in range(N-1):
+        U, S, Vh = LA.svd(state_tensor.reshape(last_svd_dim * d, d**(N-(i+1))), full_matrices=False)
+        
+        #Truncation
+        U  = U[...,:chi]    #shape is (d...d,chi)
+        Vh = Vh[:chi, ...]  #shape is (chi, d...d)
+        state_tensor = (np.diag(S[:chi]) @ Vh)
+        
+        if i > 0: #first does not need reshaping
+            U = U.reshape(min(last_svd_dim, chi), d, -1) #reshape to allow the contraction
+            
+        MPS.append(U.copy())
+        
+        last_svd_dim = len(S) if len(S) < chi else chi
+        
+    MPS.append(state_tensor)
+        
+    return MPS
 ```
+
+## Testing 
 
 ```{python}
 # Test for to_full_MPS
@@ -225,13 +303,9 @@ print(tensor_trace - np.trace(MPS[0] @ MPS[0].T)) #!= 0
 MPS[0] @ MPS[0].T #Identity
 ```
 
-## Compare with quimb method
+## Testing with quimb
 
 ```{python}
-# #!pip install quimb
-# #!pip install autoray
-import quimb
-
 N = 4
 d = 2
 sample_state = np.random.rand(d**N)
@@ -253,7 +327,6 @@ MPS_quimb.show() #Nice visualization
 ```
 
 ```{python}
-#left_canonize
 MPS_quimb.left_canonize()
 
 LA.norm(MPS_manual[-1] - MPS_quimb[-1].data) # often is 0, but sometimes not (see below)
@@ -286,83 +359,7 @@ np.trace(MPS_manual[-1] @ MPS_manual[-1].T) #should be the same as the result in
 ```
 
 ```{python}
-#Now, let's fix a maximum bond dimension chi:
-
-def to_approx_MPS(dense_state, N, d=2, chi=2):
-    """
-    Converts a @dense_state of a @N-body system made by @d-dimensional sites into a Matrix Product State 
-    in left-canonical form, with the size of links bounded by @chi.
-    
-    
-    
-    Parameters
-    ----------
-    dense_state : ndarray of shape (d^N,)
-        Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]*N) is the (i,j,k...) coefficient 
-        of the state in the computational basis.
-    N : integer > 0
-        Number of particles/sites
-    d : integer > 0
-        Local dimension of each particle/site. For a qubit, d=2.
-    chi : integer > 0
-        Maximum bond dimension
-    
-    Returns
-    -------
-    List of @N tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
-    all the others are of order 3. The shapes are not fixed, but they are (a_i, d, a_{i+1}), with a_i, a_{i+1} <= chi 
-    for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries.
-    
-     U1 - U2 - U3 - ... - UN 
-     |    |    |          |
-     
-    The index ordering convention is from left-to-right. 
-    For instance, the "left" index of U2 is the first, the "bottom" one is the second, and the "right" one is the third.
-    
-    Examples
-    --------
-    For d=2, N=7 and chi=5, the tensor network is as follows:
-     U1 -2- U2 -4- U3 -5- U4 -5- U5 -4- U6 -2- U7
-     |      |      |      |      |      |      |
-    where -x- denotes the bounds' dimension (all the "bottom-facing" indices are of dimension d=2). Thus, the shapes
-    of the returned tensors are as follows:
-       U1       U2          U3         U4        U5         U6        U7
-    [(2, 2), (2, 2, 4), (4, 2, 5), (5, 2, 5), (5, 2, 4), (4, 2, 2), (2, 2)]
-    """
-    
-    assert N > 0, "Number of sites must be > 0"
-    assert d > 0, "Local dimension must be > 0"
-    assert len(dense_state.flatten()) == d**N, "The dense_state must be of dimension d**N"
-    
-    state_tensor = dense_state.reshape([d] * N) #Reshape into a tensor of order N
-    MPS = []
-    
-    last_svd_dim = 1
-    for i in range(N-1):
-        U, S, Vh = LA.svd(state_tensor.reshape(last_svd_dim * d, d**(N-(i+1))), full_matrices=False)
-        
-        #Truncation
-        U  = U[...,:chi]    #shape is (d...d,chi)
-        Vh = Vh[:chi, ...]  #shape is (chi, d...d)
-        state_tensor = (np.diag(S[:chi]) @ Vh)
-        
-        if i > 0: #first does not need reshaping
-            U = U.reshape(min(last_svd_dim, chi), d, -1) #reshape to allow the contraction
-            
-        MPS.append(U.copy())
-        
-        last_svd_dim = len(S) if len(S) < chi else chi
-        
-    MPS.append(state_tensor)
-        
-    return MPS
-```
-
-```{python}
 #Test precision with a random state
-
-import matplotlib.pyplot as plt
-
 N = 6
 d = 2
 sample_state = np.random.rand(d**N)
@@ -373,9 +370,7 @@ errors = []
 for chi in chis:
     approx_MPS = to_approx_MPS(sample_state, N, d, chi)
     errors.append(LA.norm(sample_state - to_dense(approx_MPS).flatten()))
-```
-
-```{python}
+    
 plt.xlabel('$\chi$')
 plt.ylabel('Error')
 plt.plot(chis, errors)
@@ -405,37 +400,6 @@ plt.ylabel('Error')
 plt.plot(chis, errors)
 
 #Yay!
-```
-
-```{python}
-#TODO Add normalization
-```
-
-```{python}
-import quimb as qu
-
-#Test with 1-qubit gate (Hadamard)
-
-n = 3
-H = qu.hadamard()
-psi0 = qu.tensor.MPS_computational_state('0' * n, tags = 'psi0') #Generate a (pure separable) state |000>
-psi0.gate_(H, 0, tags='H', contract='swap+split') #Apply H in-place, maintaining the MPS form
-
-psi0.graph(color=['psi0', 'H'], show_inds=True) #Plot the network
-
-psi0.to_dense() #Result
-```
-
-```{python}
-#Test with 2-qubit gate (CNOT)
-
-n=2
-CNOT = qu.controlled('not')
-psi1 = qu.tensor.MPS_computational_state('10', tags='psi1') #|10>
-psi1 = psi1.gate_split(CNOT, (0, 1))
-
-psi1.to_dense() #Result 
-#|10> -> |11>
 ```
 
 ## Apply 2-qubit gate to MPS manually
@@ -487,8 +451,6 @@ def left_contract(states):
     
     Returns a order 2 tensor.
     """
-    #Add np.conjugate (when we will use complex numbers)
-
     
     #Convention is the following (idk if it's the most efficient...)
     #e.g. for N=4
@@ -522,32 +484,9 @@ def left_contract(states):
     return ncon(states + conj_states, top_connections + bottom_connections) 
     #Here we work with Python lists, so the + is not elementwise addition, but concatenation of arrays!
     
-def print_state(dense_state):
-    """
-    Prints a @dense_state with kets.
-    """
-    
-    N = int(np.log2(len(dense_state)))
-    
-    binaries = [bin(i)[2:] for i in range(2**N)]
-    binaries = ['0'*(N-len(a)) + a for a in binaries] #Pad with 0s
-    
-    ket = []
-    for i, c in enumerate(dense_state):
-        if not np.isclose(np.abs(c), 0.):
-            if np.isclose(np.imag(c), 0.):
-                if np.isclose(np.real(c), 1.):
-                    ket.append('|{}>'.format(binaries[i]))
-                else:
-                    ket.append('{:.3f}|{}>'.format(np.real(c), binaries[i]))  
-            else:
-                ket.append('{:.3f}|{}>'.format(c, binaries[i]))
-    print(' + '.join(ket))
 ```
 
 ```{python}
-from copy import deepcopy
-
 def apply_two_qubit_gate_full(gate_matrix, pos, state):
     """
     Apply a 2-qubit gate specified by the unitary matrix @gate_matrix to qubits at sites (@pos, @pos+1)
@@ -683,8 +622,6 @@ def apply_two_qubit_gate_full(gate_matrix, pos, state):
 ```
 
 ```{python}
-from copy import deepcopy
-
 def max_bond_dimension(mps):
     """
     Return the maximum bond dimension of a mps state.
@@ -700,7 +637,7 @@ def max_bond_dimension(mps):
     if len(mps) > 2:
         middle = np.max([a.shape[-1] for a in mps[1:-1]])
         
-    print(start, middle, end)
+    #print(start, middle, end)
     
     return max(start, end, middle)
 
@@ -737,7 +674,6 @@ def apply_two_qubit_gate(gate_matrix, pos, state, chi=2):
         gate_contraction_list[2].pop(-1) #Remove free index of right_tens
 
     gate_contracted = ncon([gate, left_tens, right_tens], gate_contraction_list)
-
     
     #---Set gate_contracted to center of orthogonality---#
 
@@ -867,6 +803,8 @@ def apply_one_qubit_gate(gate, pos, state):
     return state
 ```
 
+## Testing
+
 ```{python}
 #Example 
 
@@ -880,13 +818,13 @@ print_state(state)
 state = state.reshape([2] * N)
 state = to_full_MPS(state, d=2, N=N) #convert to MPS
 
-H = np.array(qu.hadamard())
+H = np.array(quimb.hadamard())
 state1 = apply_one_qubit_gate(H, 0, state)
 
 print("Hadamard to pos=0")
 print_state(to_dense(state1).flatten())
 
-CNOT = qu.controlled('not')
+CNOT = quimb.controlled('not')
 
 pos = 0
 state2 = apply_two_qubit_gate(CNOT, pos, state1, chi=2)
@@ -928,8 +866,8 @@ print_state(to_dense(s2bis).flatten())
 
 ```{python}
 def cphase_and_swap(phase):
-    cphase = np.array(qu.controlled('z')) ** phase
-    swap = np.array(qu.swap())
+    cphase = np.array(quimb.controlled('z')) ** phase
+    swap = np.array(quimb.swap())
     
     return swap @ cphase
 ```
@@ -940,7 +878,7 @@ def qft_circuit_swap(state, N, verbosity=False):
     Computes the QFT of a MPS @state with @N qubits.
     """
     
-    H = np.array(qu.hadamard())
+    H = np.array(quimb.hadamard())
     for pos in range(N):
         if verbosity: print("H(0)")
         state = apply_one_qubit_gate(H, 0, state)
@@ -975,12 +913,46 @@ print("Result")
 print_state(result)
 ```
 
-```{python}
-#TODO: add np.conjugate to left/right_contract to allow gates/states with complex numbers [OK]
-#(maybe it should be added even in other contractions... check!)
-#Check if normalization works as expected [Appears so, but more testing is needed]
-#Add truncation to fixed bond dimension chi. [TO DO] (And verify that the approximation is good)
-#Make a lot of tests! [TO DO]
+## Quimb implementation
 
-#Implement QFT [OK]
+```{python}
+def qft_circuit_quimb(mps, n):
+    """
+    Apply the rotations needed for the QFT
+        Parameters:
+            circuit : quantum circuit
+            n       : int
+                number of qubits in @circuit
+    
+    """
+    if n == 0:
+        return mps
+    elif n==1:
+        mps.gate_(H, 0, tags='H', contract=False) 
+        return mps
+    
+    mps.gate_(H, 0, tags='H', contract=False)
+    for i in range(n-1):
+        mps.gate_(cphase_and_swap(1/2**(i+1)), (i, i+1), tags='Cphase_swap')
+        
+    return qft_circuit_quimb(mps, n-1)
+```
+
+```{python}
+psi0 = quimb.tensor.MPS_computational_state('00', tags = 'psi0')
+psi0.gate_(H, 0, tags='h', max_bond=10, contract='split-gate')
+psi0.gate_(CNOT, (0, 1), tags='cx', max_bond=2, contract='split-gate')
+print_state(psi0.to_dense())
+```
+
+```{python}
+qft_circuit_quimb(psi0, 2)
+
+psi0.graph(color=['psi0', 'H', 'Cphase_swap'], show_inds=True) #Plot the network
+
+psi0.to_dense()
+```
+
+```{python}
+
 ```

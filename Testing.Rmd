@@ -17,52 +17,27 @@ jupyter:
 # Visualization
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from time import time
 
 # Numpy
 import numpy as np
 from numpy import linalg as LA
 
 # importing Qiskit
-from qiskit import QuantumCircuit, execute, Aer, IBMQ
+from qiskit import QuantumCircuit, execute, Aer
 from qiskit.circuit import library as lb
-from qiskit.providers.ibmq import least_busy
-from qiskit.tools.monitor import job_monitor
-from qiskit.visualization import plot_histogram, plot_bloch_multivector
 # %config InlineBackend.figure_format = 'svg' # Makes the images look nice
 
 # Tensor networks
 import quimb as quimb
 from ncon import ncon
+
+from gates import CPHASE
 ```
 
 # Quimb-qiskit interface
 
 ```{python}
-# Controlled phase shift
-def CPHASE(phi, dtype=complex, sparse=False):
-    """Construct a controlled phase gate for two qubits.
-
-    Parameters
-    ----------
-    phi : double
-        Angle of rotation.
-    sparse : bool, optional
-        Whether to construct a sparse operator.
-
-    Returns
-    -------
-    C : immutable operator
-        The controlled two-qubit gate operator.
-    """
-    ph = quimb.gen.operators.qu([[1., 0.],
-             [0., np.exp(1.0j * phi)]], dtype=dtype, sparse=sparse)
-    kws = {'dtype': dtype, 'sparse': sparse}
-    
-    op = ((quimb.gen.operators.qu([1, 0], qtype='dop', **kws) & quimb.gen.operators.eye(2, **kws)) +
-          (quimb.gen.operators.qu([0, 1], qtype='dop', **kws) & ph))
-    quimb.gen.operators.make_immutable(op)
-    return op
-
 # Controlled NOT
 CNOT = quimb.controlled('not')
 
@@ -643,13 +618,13 @@ print_state(state2)
 - Check performance with bond dimension [when implemented]
 
 ```{python}
-from time import time
+
 ```
 
 ### Quimb
 
 ```{python}
-N_qub = np.arange(4, 50, dtype=int)
+N_qub = np.arange(4, 17, dtype=int)
 total_time_quimb = np.zeros(2)
 
 for n_qub in tqdm(N_qub):
@@ -659,7 +634,7 @@ for n_qub in tqdm(N_qub):
         qc = QuantumCircuit(n_qub)
         qft_circuit(qc, n_qub)
         psi0 = MPS_circ(qc)
-        #psi_dense = psi0.to_dense()
+        psi_dense = psi0.to_dense()
         time_quimb.append( time()-start )
     total_time_quimb = np.vstack( (total_time_quimb, [np.mean(time_quimb), np.std(time_quimb) ]) )
     
@@ -679,7 +654,7 @@ for N in tqdm(N_qub_m):
         state = np.zeros(2**N)
         state = to_full_MPS(state, d=2, N=N)
         result = qft_circuit_swap(state, N)
-        #result = to_dense(result).flatten()
+        result = to_dense(result).flatten()
         time_manual.append( time()-start )
         
     total_time_manual = np.vstack( (total_time_manual, [np.mean(time_manual), np.std(time_manual) ]) )
@@ -688,18 +663,19 @@ total_time_manual = total_time_manual[1:,:]
 ```
 
 ```{python}
-plt.plot(N_qub, total_time_quimb[:, 0], color='navy')
+plt.plot(N_qub, total_time_quimb[:, 0], color='navy', label='quimb')
 plt.fill_between(N_qub, total_time_quimb[:,0]-total_time_quimb[:,1], total_time_quimb[:,0]+total_time_quimb[:,1],
                 color='cyan', alpha=0.5)
 
-plt.plot(N_qub_m, total_time_manual[:, 0], 'r--')
+plt.plot(N_qub_m, total_time_manual[:, 0], 'r--', label='manual')
 plt.fill_between(N_qub_m, total_time_manual[:,0]-total_time_manual[:,1], total_time_manual[:,0]+total_time_manual[:,1],
                 color='pink', alpha=0.5)
 
 plt.ylabel('Time [s]')
 plt.xlabel('Number of qubits')
 plt.title('Time scaling for QFT circuit')
-plt.yscale('log')
+plt.legend(loc='best')
+#plt.yscale('log')
 #plt.ylim(0, 1.5)
 plt.show()
 ```
