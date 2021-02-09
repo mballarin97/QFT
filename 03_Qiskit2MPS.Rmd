@@ -32,83 +32,8 @@ import quimb as quimb
 from ncon import ncon
 
 #gates
-from gates import CPHASE
-```
-
-```{python}
-def cphase_swap(circuit, control, target, phase):
-    circuit.cp(phase, control, target)
-    circuit.swap(control, target)
-    
-def qft_circuit(circuit, n):
-    """
-    Apply the rotations needed for the QFT
-        Parameters:
-            circuit : quantum circuit
-            n       : int
-                number of qubits in @circuit   
-    """
-    if n == 0:
-        return circuit
-    elif n==1:
-        circuit.h(0)
-        return circuit
-    
-    circuit.h(0)
-    for i in range(n-1):
-        cphase_swap(circuit, i, i+1, 1/2**(i+1))
-        
-    return qft_circuit(circuit, n-1)
-
-```
-
-```{python}
-class circ_data():
-    """ Class to contain the metadata of a qiskit quantum circuit
-
-    """
-    def __init__(self, circ):  
-        self.data = [ info for info in circ.data]
-        # Gates applied in order
-        self.gates = [ qub[0].name for qub in self.data ]
-        self.gates_params = [ qub[0].params for qub in self.data ]
-        # Indices of application of the gates
-        self.indeces = [ self._to_index( qub[1])  for qub in self.data  ]
-        # Number of qubits in the circuit
-        self.n_qub = circ.num_qubits
-        
-        
-    def _to_index(self, x):
-        return [ y.index for y in x ]
-```
-
-```{python}
-def MPS_circ(qc, gates, init_state = None, chi=None):
-    """ Function to transform a qiskit circuit @qc to a quimb MPS circuit, using the gates @gates
-        Parameters:
-            qc         : QuantumCircuit
-            init_state : String containing the state in computational basis, i.e. '000' or '0011'
-                         If None starts from empty state '0'*num_qubits
-            gates      : dict qiskit_gate_name: quimb_gate
-            chi        : maximum bond dimension. If None it is automatically chosen.
-    """
-    data = circ_data(qc)
-    
-    if init_state == None:
-        init_state = '0' * data.n_qub
-    
-    MPS = quimb.tensor.MPS_computational_state(init_state, tags = 'psi0')
-    
-    for gate_name, qub_idx, params in zip( data.gates, data.indeces, data.gates_params):
-        qubits = tuple(qub_idx)
-        if len(params)==0:
-            # Non parametric gates
-            MPS.gate_( gates[ gate_name ], qubits, tags=gate_name, max_bond=chi, contract='split-gate') 
-        else:
-            # Parametric gates
-            MPS.gate_( gates[ gate_name ](*params), qubits, tags=gate_name, max_bond=chi, contract='split-gate') 
-    
-    return MPS
+from gates import CPHASE, cphase_swap_qiskit
+from circuit import qft_circuit_qiskit, circ_data, MPS_circ
 ```
 
 ```{python}
@@ -134,7 +59,7 @@ n_qub = 2
 qc = QuantumCircuit(n_qub)
 qc.h(0)
 qc.cx(0, 1)
-qft_circuit(qc, n_qub)
+qft_circuit_qiskit(qc, n_qub)
 #qc.draw('mpl')
 ```
 

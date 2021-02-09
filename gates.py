@@ -1,8 +1,12 @@
-#---------QUIMB-----------
-# Controlled phase shift
+# Import necessary packages
 import quimb as quimb
 import numpy as np
+from qiskit import QuantumCircuit, execute, Aer
+from qiskit.circuit import library as lb
 
+# +
+#---------QUIMB-----------
+# Controlled phase shift
 def CPHASE(phi, dtype=complex, sparse=False):
     """Construct a controlled phase gate for two qubits.
 
@@ -27,5 +31,20 @@ def CPHASE(phi, dtype=complex, sparse=False):
     quimb.gen.operators.make_immutable(op)
     return op
 
+#controlled phase + swap gate
+def cphase_swap_quimb(phase):
+    cphase = np.array(quimb.controlled('z')) ** phase
+    swap = np.array(quimb.swap())
+    
+    return swap @ cphase
 
+
+
+# -
+
+#---QISKIT---
+#Controlled phase + swap gate
+def cphase_swap_qiskit(circuit, control, target, phase):
+    circuit.cp(phase, control, target)
+    circuit.swap(control, target)
 
