@@ -62,7 +62,7 @@ def qft_circuit_qiskit(circuit, n):
     
     circuit.h(0)
     for i in range(n-1):
-        cphase_swap_qiskit(circuit, i, i+1, 1/2**(i+1))
+        cphase_swap_qiskit(circuit, i, i+1, np.pi*1/2**(i+1))
         
     return qft_circuit_qiskit(circuit, n-1)
 
@@ -85,7 +85,7 @@ class circ_data():
     def _to_index(self, x):
         return [ y.index for y in x ]
 
-def MPS_circ(qc, gates, init_state = None, chi=None):
+def MPS_circ(qc, gates, init_state = None, chi=None, verbosity=False):
     """ Function to transform a qiskit circuit @qc to a quimb MPS circuit, using the gates @gates
         Parameters:
             qc         : QuantumCircuit
@@ -95,19 +95,31 @@ def MPS_circ(qc, gates, init_state = None, chi=None):
             chi        : maximum bond dimension. If None it is automatically chosen.
     """
     data = circ_data(qc)
+
     
     if init_state == None:
         init_state = '0' * data.n_qub
+        
+    if type(init_state) == quimb.tensor.tensor_1d.MatrixProductState:
+        if verbosity: print('--- State initialized ---')
+        MPS = init_state
+    else:
+        MPS = quimb.tensor.MPS_computational_state(init_state, tags = 'psi0')
     
-    MPS = quimb.tensor.MPS_computational_state(init_state, tags = 'psi0')
     
     for gate_name, qub_idx, params in zip( data.gates, data.indeces, data.gates_params):
         qubits = tuple(qub_idx)
-        if len(params)==0:
-            # Non parametric gates
-            MPS.gate_( gates[ gate_name ], qubits, tags=gate_name, max_bond=chi, contract='split-gate') 
-        else:
-            # Parametric gates
-            MPS.gate_( gates[ gate_name ](*params), qubits, tags=gate_name, max_bond=chi, contract='split-gate') 
-    
+        identity = np.eye(2**len(qubits))
+        if len(qubits)==1:
+            if len(params)==0:
+                MPS.gate_( gates[ gate_name ], qubits, tags=gate_name, max_bond=chi, contract=True)
+            else:
+                MPS.gate_( gates[ gate_name ](*params), qubits, tags=gate_name, max_bond=chi, contract=True)
+        elif len(qubits)==2:   
+            if len(params)==0:
+                MPS.gate_( gates[ gate_name ], qubits, tags=gate_name, max_bond=chi, contract='swap+split') 
+            else:
+                # Parametric gates
+                MPS.gate_( gates[ gate_name ](*params), qubits, tags=gate_name, max_bond=chi, contract='swap+split') 
+
     return MPS

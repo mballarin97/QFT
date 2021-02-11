@@ -23,7 +23,7 @@ def CPHASE(phi, dtype=complex, sparse=False):
         The controlled two-qubit gate operator.
     """
     ph = quimb.gen.operators.qu([[1., 0.],
-             [0., np.exp(1.0j * phi * np.pi)]], dtype=dtype, sparse=sparse)
+             [0., np.exp(1.0j * phi )]], dtype=dtype, sparse=sparse)
     kws = {'dtype': dtype, 'sparse': sparse}
     
     op = ((quimb.gen.operators.qu([1, 0], qtype='dop', **kws) & quimb.gen.operators.eye(2, **kws)) +
