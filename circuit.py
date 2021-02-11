@@ -7,8 +7,9 @@ from qiskit.circuit import library as lb
 from gates import cphase_swap_qiskit, cphase_swap_quimb
 from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
 
+# +
 #--- QFT - MANUAL ---
-def qft_circuit_swap(state, N, verbosity=False):
+def qft_circuit_swap_full(state, N, verbosity=False):
     """
     Computes the QFT of a MPS @state with @N qubits.
     """
@@ -23,6 +24,25 @@ def qft_circuit_swap(state, N, verbosity=False):
             state = apply_two_qubit_gate_full(cphase_swap_quimb(1/2**(i+1)), i, state) #to (i, i+1)
     
     return state
+
+def qft_circuit_swap_approx(state, N, verbosity=False, chi=2):
+    """
+    Computes the QFT of a MPS @state with @N qubits.
+    """
+    
+    H = np.array(quimb.hadamard())
+    for pos in range(N):
+        if verbosity: print("H(0)")
+        state = apply_one_qubit_gate(H, 0, state)
+        
+        for i in range(N-pos-1):
+            if verbosity: print(f"CZS(({i},{i+1}), {1/2**(i+1)})")
+            state = apply_two_qubit_gate(cphase_swap_quimb(1/2**(i+1)), i, state, chi) #to (i, i+1)
+    
+    return state
+
+
+# -
 
 #---QFT - QISKIT---
 def qft_circuit_qiskit(circuit, n):

@@ -5,7 +5,7 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.2'
-      jupytext_version: 1.9.1
+      jupytext_version: 1.3.2
   kernelspec:
     display_name: Python 3
     language: python
@@ -45,124 +45,89 @@ from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubi
 
 from gates import cphase_swap_quimb
 
-from circuit import qft_circuit_swap
+from circuit import qft_circuit_swap_full, qft_circuit_swap_approx
 ```
-
-## Convert between MPS and dense 
-
 
 ## Testing 
 
 ```{python}
-# Test for to_full_MPS
+#---to_full_mps---#
+
+#Generate a random (unnormalized) state (any amount of entanglement)
 N = 4
 d = 2
-sample_state = np.random.rand(d**N)
-MPS = to_full_MPS(sample_state, N, d)
+
+sample_state = np.random.rand(d**N) 
+sample_state = sample_state + np.random.rand(d**N) * 1j #Add random imaginary parts too
 
 sample_tensor = sample_state.reshape([d] * N)
 
-diff = LA.norm(sample_tensor - to_dense(MPS)) / LA.norm(sample_tensor)
-
-assert np.isclose(diff, 0.), "Test not passed"
-print(f"Diff (norm): {diff}")
-print("PASSED!")
+MPS = to_full_MPS(sample_state, N, d)
 ```
 
 ```{python}
-# Test for left-canonical form
-#Left-canonical means (if I understood correctly) that the rightmost site (MPS[-1]) is the center of orthogonality
-#That is, the following equality holds:
-# U1  -  U2  - ... - UN-1   - UN
-# |      |           |        |
-#U1.H - U2.H - ... - UN-1.H - UN.H
-# (==) 
-#  UN
-#  ||
-# UN.H
-#where .H denotes the Hermitian conjugate (\dagger), which is just .T for real matrices (our case).
-#In other words, all tensors to the left of UN contract to an identity, which is represented as a simple link. 
-#Note also that, since UN is a 2-order tensor, the bottom operation is just Tr(UN @ UN.H), where @ is matrix multiplication.
+print("Check for exactness")
+diff = LA.norm(sample_tensor - to_dense(MPS)) / LA.norm(sample_tensor) #Representation error 
+#(should be = 0, since no approximation is done)
 
-#First, test that the contraction of all the left-tensors is an identity.
-#Convention is the following (idk if it's the most efficient...)
-#e.g. for N=4
-# U1 -2- U2 -5- U3 -8- U4 - (-1)
-# |1     |4     |7     |10
-# U1 -3- U2 -6- U3 -9- U4 - (-2)
-#Basically, the contracted indices follow the order of "diagonals" from the bottom-left to the top-right.
-#Start with the first connection, which links U1 to U1.H. Now the "top-right" is between U1 and U2.
-#Now restart from the next connection at the bottom, which links U1 and U2. Going to the "top-right" we see U2 - U2.H, and then
-#U2-U3, and so on.
-
-N = len(MPS)-1 #Number of tensors to be contracted (all except the rightmost one)
-#Read indices "by row"
-bottom_indices = 3 * (np.arange(N)+1)
-top_indices = bottom_indices - 1
-middle_indices = bottom_indices - 2
-
-#Free indices
-top_indices[-1] = -1
-bottom_indices[-1] = -2 
-
-top_connections = [[1,2]] + [[top_indices[i], middle_indices[i+1], top_indices[i+1]] for i in range(N-1)]
-bottom_connections = [[1,3]] + [[bottom_indices[i], middle_indices[i+1], bottom_indices[i+1]] for i in range(N-1)]
-
-ncon(MPS[:-1] + MPS[:-1], top_connections + bottom_connections) #this should be a dxd identity matrix
-#Here we work with Python lists, so the + is not elementwise addition, but concatenation of arrays!
+assert np.isclose(diff, 0.), "FAIL"
+print(f"Diff (initial - reconstructed): {diff}")
+print("PASS")
 ```
 
 ```{python}
-#Let's do the full contraction of all tensors (TensorTrace(U1 U2 U3...))
+print("Check for left-canonical form (Contracting the k leftmost sites gives an identity)")
 
-N = len(MPS)-1 #Number of tensors to be contracted (all except the rightmost one)
-#Read indices "by row"
-bottom_indices = 3 * (np.arange(N)+1)
-top_indices = bottom_indices - 1
-middle_indices = bottom_indices - 2
+N = len(MPS)
+for k in range(1, N):
+    left_trace = left_contract(MPS[:k])
+    assert np.allclose(left_trace, np.eye(len(left_trace))), "FAIL"
 
-#No free indices
-
-top_connections = [[1,2]] + [[top_indices[i], middle_indices[i+1], top_indices[i+1]] for i in range(N-1)]
-bottom_connections = [[1,3]] + [[bottom_indices[i], middle_indices[i+1], bottom_indices[i+1]] for i in range(N-1)]
+print("PASS")
 ```
 
 ```{python}
-#Add the final contraction
-last_index_bot = bottom_connections[-1][-1]
-last_index_top = top_connections[-1][-1]
-new_contraction_index = last_index_bot + 1
-full_bottom = bottom_connections + [[last_index_bot, new_contraction_index]]
-full_top = top_connections + [[last_index_top, new_contraction_index]]
+def tensor_trace(MPS):
+    """
+    Contract an MPS with itself. (TensorTrace)
+    """
+    
+    #Use the same schema from left_contract for the first N-1 sites
+    N = len(MPS)-1 
+    bottom_indices = 3 * (np.arange(N)+1)
+    top_indices = bottom_indices - 1
+    middle_indices = bottom_indices - 2
 
-tensor_trace = ncon(MPS + MPS, full_top + full_bottom) #Trace obtained by contracting the whole tensor network
+    top_connections = [[1,2]] + [[top_indices[i], middle_indices[i+1], top_indices[i+1]] for i in range(N-1)]
+    bottom_connections = [[1,3]] + [[bottom_indices[i], middle_indices[i+1], bottom_indices[i+1]] for i in range(N-1)]
 
-manual_trace = np.trace(MPS[-1] @ MPS[-1].T) #Trace obtained by contracting just the center of orthogonality 
-#(i.e. the rightmost site)
+    #Add the contraction with the N-th site
+    last_index_bot = bottom_connections[-1][-1]
+    last_index_top = top_connections[-1][-1]
+    new_contraction_index = last_index_bot + 1
+    full_bottom = bottom_connections + [[last_index_bot, new_contraction_index]]
+    full_top = top_connections + [[last_index_top, new_contraction_index]]
 
-print(tensor_trace - manual_trace) #should be around machine precision (i.e. 0)
+    MPSconj = [np.conjugate(a) for a in MPS]
+    tensor_trace = ncon(MPS + MPSconj, full_top + full_bottom)
+    
+    return tensor_trace
 ```
 
 ```{python}
-print(tensor_trace - np.trace(MPS[0] @ MPS[0].T)) #!= 0
-#Note that this does not work if we use another tensor (not the rightmost)
-#for the trace. This is because, by construction, we merged the singular values np.diag(S) always with the tensor
-#on the right. Thus, all the tensors on the left are unitary, but the rightmost is not!
+print("Check for left-canonical form (trace on last site = full tensor trace)")
+
+full_tensor_trace = tensor_trace(MPS)
+local_trace = np.trace(MPS[-1] @ np.conjugate(MPS[-1]).T)
+
+assert np.isclose(full_tensor_trace, local_trace), "FAIL"
+print("PASS")
 ```
 
 ```{python}
-#For example, U1 is unitary:
-MPS[0] @ MPS[0].T #Identity
-```
+print("Compare MPS representation with that computed by quimb library (same trace on rightmost site)")
 
-## Testing with quimb
-
-```{python}
-N = 4
-d = 2
-sample_state = np.random.rand(d**N)
-
-MPS_manual = to_full_MPS(sample_state, N, d)
+MPS_manual = MPS
 
 ket = quimb.qu(sample_state, qtype='ket') #convert to quimb format
 
@@ -170,44 +135,63 @@ MPS_quimb = quimb.tensor.MatrixProductState.from_dense(ket, dims=[d]*N)
 
 #See https://quimb.readthedocs.io/en/latest/_autosummary/quimb.tensor.tensor_1d.html?highlight=left_canonize#quimb.tensor.tensor_1d.MatrixProductOperator
 #for the docs
-
 #Also https://quimb.readthedocs.io/en/master/tensor-algorithms.html
-```
 
-```{python}
-MPS_quimb.show() #Nice visualization
-```
-
-```{python}
+MPS_quimb.show() 
 MPS_quimb.left_canonize()
 
-LA.norm(MPS_manual[-1] - MPS_quimb[-1].data) # often is 0, but sometimes not (see below)
+#Since both are in left-canonical form, the traces of their rightmost sites should be the same
+manual_trace = np.trace(MPS_manual[-1] @ np.conjugate(MPS_manual[-1].T))
+quimb_trace  = np.trace(MPS_quimb[-1].data @ np.conjugate(MPS_quimb[-1].data.T))
+
+assert np.isclose(manual_trace, quimb_trace), "FAIL"
+print("PASS")
+```
+
+## to_approx_MPS
+
+```{python}
+#---to_approx_MPS---#
+
+#Generate a random state (any amount of entanglement)
+N = 4
+d = 2
+
+sample_state = np.random.rand(d**N) #Random state (any amount of entanglement)
+sample_state = sample_state + np.random.rand(d**N) * 1j #Add random imaginary parts too
+sample_tensor = sample_state.reshape([d] * N)
+
+MPS_full   = to_full_MPS(sample_state, N, d)
+MPS_approx = to_approx_MPS(sample_state, N, d, chi=2) 
 ```
 
 ```{python}
-#It turns out that often the two tensors are equal, but sometimes there are sign differences or more.
+print("Approximation error (initial - reconstructed)")
+diff = LA.norm(sample_tensor - to_dense(MPS_approx)) / LA.norm(sample_tensor) #Representation error 
+#(should be = 0, since no approximation is done)
 
-#This can be explained since the left-canonical form does not fix completely the gauge of the tensor network
-#In fact, we can still consider unitary changes in the bonds. Consider a left-canonical MPS:
-
-# U1 - U2 - U3 - ... - [UN]
-# |    |    |           |
-
-#Let U be a unitary matrix. I can always insert it "in-between" a bond:
-# (U1 - U) - (U.H - U2) - ...
-#  |                |
-
-#Now, if I aggregate U1 and U, the resulting tensor is still unitary (because both U1 and U are unitary)
-#Same for U.H and U2. Thus, all the tensors are not 100% fixed by the gauge.
+print(diff) #in general non-zero
 ```
 
 ```{python}
-#Still the traces should always be the same!
-np.trace(MPS_quimb[-1].data @ np.conjugate(MPS_quimb[-1].data.T) )
+print("Check for left-canonical form (Contracting the k leftmost sites gives an identity)")
+
+N = len(MPS_approx)
+for k in range(1, N):
+    left_trace = left_contract(MPS_approx[:k])
+    assert np.allclose(left_trace, np.eye(len(left_trace))), "FAIL"
+
+print("PASS")
 ```
 
 ```{python}
-np.trace(MPS_manual[-1] @ MPS_manual[-1].T) #should be the same as the result in the above cell
+print("Check for left-canonical form (trace on last site = full tensor trace)")
+
+full_tensor_trace = tensor_trace(MPS_approx)
+local_trace = np.trace(MPS_approx[-1] @ np.conjugate(MPS_approx[-1]).T)
+
+assert np.isclose(full_tensor_trace, local_trace), "FAIL"
+print("PASS")
 ```
 
 ```{python}
@@ -254,43 +238,161 @@ plt.plot(chis, errors)
 #Yay!
 ```
 
-## Apply 2-qubit gate to MPS manually
+## apply_one_qubit_gate
 
 ```{python}
 from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
 ```
 
-## Testing
-
 ```{python}
-#Example 
-
-N=2
-state = np.zeros(2**N)
-state[0] = 1
+#Start from a |00...0> state
+N=4
+zero_state = np.zeros(2**N)
+zero_state[0] = 1
 
 print("Initial state:")
-print_state(state)
+print_state(zero_state)
 
-state = state.reshape([2] * N)
-state = to_full_MPS(state, d=2, N=N) #convert to MPS
+zero_state = zero_state.reshape([2] * N)
+```
+
+```{python}
+#Apply the Hadamard gate to the 0-th site
+MPS_zero = to_full_MPS(zero_state, d=2, N=N) #convert to MPS
 
 H = np.array(quimb.hadamard())
-state1 = apply_one_qubit_gate(H, 0, state)
+MPS_with_H = apply_one_qubit_gate(H, 0, MPS_zero)
 
-print("Hadamard to pos=0")
-print_state(to_dense(state1).flatten())
+print("Hadamard to pos=0 (compare true with computed)")
+print_state(to_dense(MPS_with_H).flatten())
 
+assert np.allclose(to_dense(MPS_with_H).flatten()[[0, 2**(N-1)]], np.sqrt(2)/2), "FAIL"
+print("PASS")
+
+#Maybe extend to test all sites with a loop
+```
+
+```{python}
+#Apply a phase of pi/4 to the 0-th site (starting from the previous result)
+print("Initial state:")
+print_state(to_dense(MPS_with_H).flatten())
+
+PHASE_pi4 = np.array(quimb.phase_gate(phi=np.pi/4))
+MPS_with_PHASE = apply_one_qubit_gate(PHASE_pi4, 0, MPS_with_H)
+
+result = to_dense(MPS_with_PHASE).flatten()
+
+print("PHASE(pi/4) to pos=0 (compare true with computed)")
+print_state(result)
+
+#Check normalization
+print("Check normalization")
+assert np.isclose(np.dot(result, np.conjugate(result)), 1.), "FAIL"
+print("PASS")
+```
+
+```{python}
+def check_left_canonization(states):
+    N = len(states)
+    
+    for k in range(1,N):
+        rho = left_contract(states[:k])
+        assert np.allclose(rho, np.eye(len(rho))), "FAIL"
+    
+    print("State is left-canonical")
+```
+
+```{python}
+print("Check if left-canonization is maintained after applying a 1-qubit gate")
+
+#Apply a Hadamard to pos=2 (third qubit)
+
+print("|00...0> with H at third qubit:")
+MPS_with_H = apply_one_qubit_gate(H, 2, MPS_zero)
+print_state(to_dense(MPS_with_H).flatten())
+
+check_left_canonization(MPS_with_H)
+```
+
+## apply_two_qubit_gate
+
+```{python}
+#|1000> -> |1100>
+N = 4
+state = np.zeros(2**N)
+state[2**(N-1)] = 1 #|100...0>
+
+MPS_one = to_full_MPS(state, N, 2)
+```
+
+```{python}
 CNOT = quimb.controlled('not')
 
 pos = 0
-state2 = apply_two_qubit_gate(CNOT, pos, state1, chi=2)
+MPS_with_CNOT = apply_two_qubit_gate(CNOT, pos, MPS_one, chi=max_bond_dimension(MPS_one)) #CNOT to sites (pos, pos+1)
 
 print(f"Apply CNOT to sites: ({pos}, {pos+1})")
-state2 = to_dense(state2).flatten()
-print("New state:")
-print_state(state2)
+result = to_dense(MPS_with_CNOT).flatten()
+
+print_state(result)
+
+true_result = np.zeros(2**N)
+true_result[2**(N-1) + 2**(N-2)] = 1
+print("True result: ")
+print_state(true_result)
+
+assert np.allclose(result, true_result), "FAIL"
+print("PASS")
 ```
+
+```{python}
+#Apply a CPHASE
+phase = 1/4
+CPHASE = np.array(quimb.controlled('z')) ** phase
+
+MPS_with_CPHASE = apply_two_qubit_gate(CPHASE, 0, MPS_with_CNOT, chi=max_bond_dimension(MPS_with_CNOT))
+
+print(f"Apply CPHASE to sites (0,1)")
+result = to_dense(MPS_with_CPHASE).flatten()
+print_state(result)
+
+true_result = np.zeros(2**N, dtype=complex)
+true_result[2**(N-1) + 2**(N-2)] = np.sqrt(2)/2 * (1 + 1j)
+print("True result")
+print_state(true_result)
+
+assert np.allclose(result, true_result), "FAIL"
+print("PASS")
+
+print("Check normalization")
+assert np.isclose(np.dot(result, np.conjugate(result)), 1.), "FAIL"
+print("PASS")
+```
+
+```{python}
+#Check left canonicalization
+N = 7
+state = np.zeros(2**N)
+state[2**(N-4)] = 1 #|000100>
+
+print("Initial state")
+print_state(state)
+MPS_one = to_full_MPS(state, N, 2)
+check_left_canonization(MPS_one)
+
+MPS_with_CNOT = apply_two_qubit_gate(CNOT, 3, MPS_one, chi=max_bond_dimension(MPS_one))
+result = to_dense(MPS_with_CNOT).flatten()
+print_state(result)
+
+check_left_canonization(MPS_with_CNOT[:5]) #Check if left-canonical (for all sites to the left of the CNOT position
+#+ those involved in the CNOT)
+```
+
+```{python}
+right_contract(MPS_with_CNOT[-2:]) #kinda sus
+```
+
+## Testing
 
 ```{python}
 def print_shapes(arr):
@@ -323,30 +425,93 @@ print_state(to_dense(s2bis).flatten())
 
 ```{python}
 from gates import cphase_swap_quimb
-from circuit import qft_circuit_swap
 ```
 
 ```{python}
-N=2
-state = np.zeros(2**N)
-state[0] = 1
-state[-1] = 1
-state = state/np.sqrt(2)
+import cirq
+
+def cphase_and_swap_cirq(ctrl, target, phase):
+    """
+    Combine the CPHASE gate with the SWAP operation, used for QFT algorithm.
+    Input
+        crtl: 
+        target:
+        phase:
+    Return
+        cirq blabla
+    """
+    yield cirq.CZ(ctrl, target) ** phase
+    yield cirq.SWAP(ctrl, target)
+
+
+def qft_circuit_swap_cirq(qubits, circuit=[]):
+    """
+    Build a circuit implementing the QFT algorithm on the given @qubits. 
+    The order of @qubits is preserved by SWAP operations.
+    Implemented using only local operations, i.e. gates acting on neighbouring qubits.
+    Adapted from: https://github.com/quantumlib/Cirq/blob/master/examples/quantum_fourier_transform.py and extended to
+    n generic qubits through recursion.
+    """
+    n = len(qubits)
+    assert n > 0, "Number of qubits must be > 0"
+    
+    if (n == 1):
+        circuit.append(cirq.H(qubits[0]))
+        return cirq.Circuit(circuit, strategy=cirq.InsertStrategy.EARLIEST)
+    else:
+        circuit.append(cirq.H(qubits[0]))
+        circuit.extend(cphase_and_swap_cirq(qubits[i], qubits[i+1], 1/2**(i+1)) for i in range(n-1))
+        return qft_circuit_swap_cirq(qubits[:n-1], circuit)
+```
+
+```{python}
+#---with to_full_MPS---#
+N=10
+ghz = np.zeros(2**N)
+ghz[0] = 1
+ghz[-1] = 1
+ghz = ghz/np.sqrt(2)
 
 print("Initial state")
-print_state(state)
-state = to_full_MPS(state, d=2, N=N)
+print_state(ghz)
+MPS_ghz = to_full_MPS(ghz, d=2, N=N)
+
+manual_qft = qft_circuit_swap_full(MPS_ghz, N)
+manual_qft_dense = to_dense(manual_qft).flatten()
 ```
 
 ```{python}
-result = qft_circuit_swap(state, N)
+#Compare with cirq
+qubits = cirq.LineQubit.range(N)
+circuit = qft_circuit_swap_cirq(qubits, [])
+
+simulator = cirq.Simulator()
+cirq_qft_dense = simulator.simulate(circuit, initial_state=ghz).final_state_vector
+
+print("Fidelity between QFT results from manual and Cirq: ", np.abs(np.dot(manual_qft_dense, np.conjugate(cirq_qft_dense)))**2)
 ```
 
 ```{python}
-result = to_dense(result).flatten()
+#---with to_approx_MPS---#
+N=10
+chi=2
+ghz = np.zeros(2**N)
+ghz[0] = 1
+ghz[-1] = 1
+ghz = ghz/np.sqrt(2)
 
-print("Result")
-print_state(result)
+print("Initial state")
+print_state(ghz)
+MPS_ghz = to_approx_MPS(ghz, d=2, N=N, chi=chi)
+
+manual_qft = qft_circuit_swap_approx(MPS_ghz, N, chi=chi)
+manual_qft_dense = to_dense(manual_qft).flatten()
+
+print(f"Fidelity between QFT results from manual (chi={chi}) and Cirq: ", np.abs(np.dot(manual_qft_dense, np.conjugate(cirq_qft_dense)))**2)
+
+#Check bond dimensions
+assert max_bond_dimension(MPS_ghz) == chi, "Bond dimension error"
+assert max_bond_dimension(manual_qft) == chi, "Bond dimension error"
 ```
 
 ## Quimb implementation
