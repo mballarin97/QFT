@@ -33,6 +33,7 @@ from qiskit.circuit import library as lb
 import quimb as quimb
 from ncon import ncon
 
+#User-defined functions in support files
 from helper import print_state, right_contract, left_contract
 from helper import to_full_MPS, to_dense, to_approx_MPS
 
@@ -41,6 +42,53 @@ from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubi
 from gates import CPHASE, cphase_swap_qiskit, cphase_swap_quimb
 
 from circuit import qft_circuit_qiskit, qft_circuit_swap, circ_data, MPS_circ
+```
+
+```{python}
+# Plotting LateX figures
+matplotlib.use("pgf")
+matplotlib.rcParams.update({ 
+    "pgf.texsystem": "pdflatex",
+    'font.family': 'serif',
+    'text.usetex': True,
+    'pgf.rcfonts': False,
+    "pgf.preamble": [ r"\usepackage[utf8]{inputenc}" ]
+})
+
+#Font size configuration
+SMALL_SIZE = 8
+MEDIUM_SIZE = 10
+BIGGER_SIZE = 11
+BIGGEST_SIZE = 12
+
+#All sizes are customizable here
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=BIGGER_SIZE)   # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGEST_SIZE)  # fontsize of the figure title
+#plt.rcParams['axes.facecolor'] = 'white'
+```
+
+```{python}
+def get_figsize(wf=0.5, hf=(5.**0.5-1.0)/2.0, ):
+    """Parameters:
+      - wf [float]:  width fraction in columnwidth units
+      - hf [float]:  height fraction in columnwidth units.
+                     Set by default to golden ratio.
+      - columnwidth [float]: width of the column in latex. Get this from LaTeX 
+                             using \showthe\columnwidth
+    Returns:  [fig_width,fig_height]: that should be given to matplotlib
+    """
+    columnwidth = 510.0 #! The width of the Latex paper should be put here [OK]
+    
+    fig_width_pt = columnwidth*wf 
+    inches_per_pt = 1.0/72.27               # Convert pt to inch
+    fig_width = fig_width_pt*inches_per_pt  # width in inches
+    fig_height = fig_width*hf      # height in inches
+    return [fig_width, fig_height]
 ```
 
 # Quimb-qiskit interface
@@ -64,9 +112,8 @@ gates = {'h': H,
 
 ## Tests to do:
 
-- Confront performances and results between quimb and our implementation [DONE]
-- Check maximum number of qubit simulabili [DONE AGAIN]
-- Check performance with bond dimension [when implemented]
+-Plots for timings (Bea). Run the QFT algorithm (manual and quimb) on the same state (e.g. GHZ). Plot the execution time as function of the number of qubits in the state (in a log-plot). For each algorithm, consider both the "full" version, with no approximation, and one where the bond dimension is fixed to chi (e.g. =2). Consider making one subplot per algorithm, but keep them side-by-side with shared y, so that they are comparable. 
+Do the same kind of plot for quimb with different values of chi (e.g. 2, 4, 8, 16...). 
 
 ```{python}
 #Example 
@@ -98,7 +145,7 @@ print("New state:")
 print_state(state2)
 ```
 
-### Quimb
+### Quimb - optimal $\chi$
 
 ```{python}
 N_qub = np.arange(4, 17, dtype=int)
@@ -108,14 +155,37 @@ for n_qub in tqdm(N_qub):
     time_quimb = []
     for _ in range(10):
         start = time()
+        state = quimb.tensor.tensor_gen.MPS_ghz_state(n_qub)
         qc = QuantumCircuit(n_qub)
         qft_circuit_qiskit(qc, n_qub)
-        psi0 = MPS_circ(qc, gates)
+        psi0 = MPS_circ(qc, gates, init_state=state)
         psi_dense = psi0.to_dense()
         time_quimb.append( time()-start )
     total_time_quimb = np.vstack( (total_time_quimb, [np.mean(time_quimb), np.std(time_quimb) ]) )
     
 total_time_quimb = total_time_quimb[1:,:]
+```
+
+### Quimb - full
+
+```{python}
+N_qub_chi = np.arange(4, 17, dtype=int)
+total_time_quimb_chi = np.zeros(2)
+
+for n_qub in tqdm(N_qub_chi):
+    time_quimb = []
+    for _ in range(10):
+        start = time()
+        state = quimb.tensor.tensor_gen.MPS_ghz_state(n_qub)
+        chi =  2**(np.floor(N/2))
+        qc = QuantumCircuit(n_qub)
+        qft_circuit_qiskit(qc, n_qub)
+        psi0 = MPS_circ(qc, gates, init_state=state, chi=chi)
+        psi_dense = psi0.to_dense()
+        time_quimb.append( time()-start )
+    total_time_quimb_chi = np.vstack( (total_time_quimb_chi, [np.mean(time_quimb), np.std(time_quimb) ]) )
+    
+total_time_quimb_chi = total_time_quimb_chi[1:,:]
 ```
 
 ### Manual
@@ -129,8 +199,11 @@ for N in tqdm(N_qub_m):
     for _ in range(10):
         start = time()
         state = np.zeros(2**N)
+        state[0] = 1
+        state[-1] = 1
+        state = state / np.sqrt(2)
         state = to_full_MPS(state, d=2, N=N)
-        result = qft_circuit_swap(state, N)
+        result = qft_circuit_swap(state, N, chi=max_bond_dimension(state))
         result = to_dense(result).flatten()
         time_manual.append( time()-start )
         
@@ -139,22 +212,143 @@ for N in tqdm(N_qub_m):
 total_time_manual = total_time_manual[1:,:]
 ```
 
+### Manual - with bond dimension $\chi=2$
+
+```{python}
+total_time_chi = np.zeros(2)
+N_qub_m_chi = np.arange(4, 17, dtype=int)
+
+for N in tqdm(N_qub_m_chi):
+    time_manual = []
+    for _ in range(10):
+        start = time()
+        state = np.zeros(2**N)
+        state[0] = 1
+        state[-1] = 1
+        state = state / np.sqrt(2)
+        state = to_approx_MPS(state, N=N, d=2, chi=2)
+        result = qft_circuit_swap(state, N, chi=2)
+        result = to_dense(result).flatten()
+        time_manual.append( time()-start )
+        
+    total_time_chi = np.vstack( (total_time_chi, [np.mean(time_manual), np.std(time_manual) ]) )
+    
+total_time_chi = total_time_chi[1:,:]
+```
+
+```{python}
+fig, ax = plt.subplots(1, 2, figsize=(9, 3))
+
+ax[0].plot(N_qub_chi, total_time_quimb_chi[:, 0], color='navy', label='quimb')
+ax[0].fill_between(N_qub_chi, total_time_quimb_chi[:,0]-total_time_quimb_chi[:,1], 
+                   total_time_quimb_chi[:,0]+total_time_quimb_chi[:,1],
+                   color='cyan', alpha=0.5)
+
+ax[0].plot(N_qub_m, total_time_manual[:, 0], 'r--', label='manual')
+ax[0].fill_between(N_qub_m, total_time_manual[:,0]-total_time_manual[:,1], 
+                   total_time_manual[:,0]+total_time_manual[:,1],
+                   color='pink', alpha=0.5)
+
+ax[0].set_ylabel('Time [s]')
+ax[0].set_xlabel('Number of qubits')
+ax[0].set_title('Time scaling for QFT circuit - full')
+ax[0].legend(loc='best')
+ax[0].set_yscale('log')
+
+ax[1].plot(N_qub, total_time_quimb[:, 0], color='navy', label='quimb')
+ax[1].fill_between(N_qub, total_time_quimb[:,0]-total_time_quimb[:,1], 
+                   total_time_quimb[:,0]+total_time_quimb[:,1],
+                   color='cyan', alpha=0.5)
+
+ax[1].plot(N_qub_m_chi, total_time_chi[:, 0], 'r--', label='manual')
+ax[1].fill_between(N_qub_chi, total_time_chi[:,0]-total_time_chi[:,1], 
+                   total_time_chi[:,0]+total_time_chi[:,1],
+                   color='pink', alpha=0.5)
+
+#ax[1].set_ylabel('Time [s]')
+ax[1].set_xlabel('Number of qubits')
+ax[1].set_title('Time scaling for QFT circuit - approx.')
+ax[1].legend(loc='best')
+ax[1].set_yscale('log')
+
+plt.show()
+fig.tight_layout()
+
+```
+
+### Different $\chi$ for manual method
+
+```{python}
+chis = np.array([2**i for i in range(2,5)])
+
+Ns = np.arange(4, 17, dtype=int)
+
+time_chis = np.zeros( (len(chis), len(Ns), 2) )
+
+for i, x in enumerate(chis):
+    for j, N in tqdm(enumerate(Ns)):
+        times = []
+        for _ in range(10):
+            start = time()
+            state = np.zeros(2**N)
+            state[0] = 1
+            state[-1] = 1
+            state = state / np.sqrt(2)
+            state = to_approx_MPS(state, N=N, d=2, chi=x)
+            result = qft_circuit_swap(state, N, chi=x)
+            result = to_dense(result).flatten()
+            times.append( time()-start )
+
+        time_chis[i, j, :] = ([np.mean(times), np.std(times) ])
+
+```
+
 ```{python}
 plt.plot(N_qub, total_time_quimb[:, 0], color='navy', label='quimb')
-plt.fill_between(N_qub, total_time_quimb[:,0]-total_time_quimb[:,1], total_time_quimb[:,0]+total_time_quimb[:,1],
-                color='cyan', alpha=0.5)
+plt.fill_between(N_qub, total_time_quimb[:,0]-total_time_quimb[:,1], 
+                   total_time_quimb[:,0]+total_time_quimb[:,1],
+                   color='cyan', alpha=0.5)
 
-plt.plot(N_qub_m, total_time_manual[:, 0], 'r--', label='manual')
-plt.fill_between(N_qub_m, total_time_manual[:,0]-total_time_manual[:,1], total_time_manual[:,0]+total_time_manual[:,1],
-                color='pink', alpha=0.5)
+plt.plot(N_qub_m_chi, total_time_chi[:, 0], 'r--', label='manual')
+plt.fill_between(N_qub_chi, total_time_chi[:,0]-total_time_chi[:,1], 
+                   total_time_chi[:,0]+total_time_chi[:,1],
+                   color='pink', alpha=0.5)
+
+for i in range(len(chis)):
+    plt.plot(Ns, time_chis[i, :, 0], label='chi='+str(chis[i]))
+    plt.fill_between(Ns, time_chis[i, :, 0]-time_chis[i, :, 1], 
+                   time_chis[i, :, 0]+time_chis[i, :, 1],
+                   alpha=0.5)
+
 
 plt.ylabel('Time [s]')
 plt.xlabel('Number of qubits')
-plt.title('Time scaling for QFT circuit')
+plt.title('Time scaling for QFT circuit - approx')
 plt.legend(loc='best')
-#plt.yscale('log')
-#plt.ylim(0, 1.5)
-plt.show()
+plt.yscale('log')
+
+```
+
+```{python}
+
+```
+
+```{python}
+#1. Create the figure
+fig, ax = plt.subplots(figsize=get_figsize(.45)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
+
+#2. Do the plot as usual (don't forget axes labels!)
+xs = np.linspace(-np.pi, np.pi, 100)
+plt.plot(xs, np.sin(xs), c='r', label='sin')
+plt.xlabel('x')
+plt.ylabel('y')
+
+#3. Save the result. Note that showing the figure here in Colab (e.g. with plt.show()) may prevent the cell from saving the pdf (for some reason). So, when exporting, look at the figure from the .pdf
+fig.tight_layout()
+plt.savefig("example_test.pdf") #Save as pdf in the "report_plots" folder
+
+#4. Check that the generated .pdf is satisfactory. It will have the correct dimensions for the Latex report.
+
 ```
 
 ```{python}
