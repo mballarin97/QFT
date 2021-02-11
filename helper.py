@@ -93,7 +93,7 @@ def left_contract(states):
     
     if (N == 1):
         state = states[0]
-        return ncon([state, state], [[1, -1], [1, -2]])
+        return ncon([state, np.conjugate(state)], [[1, -1], [1, -2]]) 
     
     #Read indices "by row"
     bottom_indices = 3 * (np.arange(N)+1)
