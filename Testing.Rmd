@@ -39,22 +39,22 @@ import quimb as quimb
 from ncon import ncon
 
 #User-defined functions in support files
-from helper import print_state, right_contract, left_contract
-from helper import to_full_MPS, to_dense, to_approx_MPS
+from MPS_QFT.helper import print_state, right_contract, left_contract
+from MPS_QFT.helper import to_full_MPS, to_dense, to_approx_MPS
 
-from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
+from MPS_QFT.manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
 
-from gates import CPHASE, cphase_swap_qiskit, cphase_swap_quimb
+from MPS_QFT.gates import CPHASE, cphase_swap_qiskit, cphase_swap_quimb
 
-from circuit import qft_circuit_swap_full, qft_circuit_swap_approx
-from circuit import qft_circuit_qiskit, circ_data, MPS_circ 
+from MPS_QFT.circuit import qft_circuit_swap_full, qft_circuit_swap_approx
+from MPS_QFT.circuit import qft_circuit_qiskit, circ_data, MPS_circ 
 ```
 
 ```{python}
 # Plotting LateX figures
 matplotlib.use("pgf")
 matplotlib.rcParams.update({ 
-    #"pgf.texsystem": "pdflatex",
+    "pgf.texsystem": "pdflatex",
     'font.family': 'serif',
     'text.usetex': False,
     'pgf.rcfonts': False,
@@ -73,7 +73,7 @@ plt.rc('axes', titlesize=BIGGER_SIZE)    # fontsize of the axes title
 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-plt.rc('legend', fontsize=MEDIUM_SIZE)   # legend fontsize
+plt.rc('legend', fontsize=SMALL_SIZE)   # legend fontsize
 plt.rc('figure', titlesize=BIGGEST_SIZE) # fontsize of the figure title
 #plt.rcParams['axes.facecolor'] = 'white'
 ```
@@ -95,10 +95,6 @@ def get_figsize(wf=0.5, hf=(5.**0.5-1.0)/2.0, ):
     fig_width = fig_width_pt*inches_per_pt  # width in inches
     fig_height = fig_width*hf      # height in inches
     return [fig_width, fig_height]
-```
-
-```{python}
-print(get_figsize(0.95))
 ```
 
 ## Quimb-qiskit interface
@@ -235,47 +231,69 @@ for i,n in enumerate(tqdm(N_manual)):
     
 ```
 
+#### Save/load data
+
 ```{python}
-fig, ax = plt.subplots(1, 2, figsize=get_figsize(.95)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
-#fig, ax = plt.subplots(1, 2, figsize=(9, 3))
+np.save("times_quimb_approx", times_quimb_approx)
+np.save("times_quimb_full", times_quimb_full)
+np.save("times_manual_chi", times_manual_chi)
+np.save("times_manual_full", times_manual_full)
 
-#Comparison of "full" computations of QFT
-ax[0].plot(N_quimb, times_quimb_full[:, 0], color='navy', label='quimb')
-ax[0].fill_between(N_quimb, times_quimb_full[:,0]-times_quimb_full[:,1], 
-                   times_quimb_full[:,0]+times_quimb_full[:,1],
-                   color='cyan', alpha=0.5)
+# times_quimb_approx = np.load(".\\data\\times_quimb_approx.npy")
+# times_quimb_full = np.load(".\\data\\times_quimb_full.npy")
+# times_manual_chi = np.load(".\\data\\times_manual_chi.npy")
+# times_manual_full = np.load(".\\data\\times_manual_full.npy")
 
-ax[0].plot(N_manual, times_manual_full[:, 0], 'r--', label='manual')
-ax[0].fill_between(N_manual, times_manual_full[:,0]-times_manual_full[:,1], 
-                   times_manual_full[:,0]+times_manual_full[:,1],
-                   color='pink', alpha=0.5)
+N_quimb = np.arange(4, 17, dtype=int)
+N_manual = np.arange(4, 13, dtype=int)
+
+```
+
+```{python}
+fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
+#fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20))
+
+# create a color palette
+palette = plt.get_cmap('Set2')
+
+#Comparison of "approximated" computations of QFT
+ax[0].plot(N_quimb, times_quimb_approx[:, 0], color=palette(1), linestyle=':', label='quimb')
+ax[0].fill_between(N_quimb, times_quimb_approx[:,0]-times_quimb_approx[:,1], 
+                   times_quimb_approx[:,0]+times_quimb_approx[:,1],
+                   color=palette(1), alpha=0.5)
+
+ax[0].plot(N_quimb, times_manual_chi[:, 0], color=palette(0), linestyle='-.', label='manual')
+ax[0].fill_between(N_quimb, times_manual_chi[:,0]-times_manual_chi[:,1], 
+                   times_manual_chi[:,0]+times_manual_chi[:,1],
+                   color=palette(0), alpha=0.4)
 
 ax[0].set_ylabel('Time [s]')
 ax[0].set_xlabel('Number of qubits')
-ax[0].set_title('Time scaling for QFT circuit - full')
+ax[0].set_title('Time scaling for QFT - $\chi=2$')
 ax[0].legend(loc='best')
 ax[0].set_yscale('log')
 
-#Comparison of "approximated" computations of QFT
-ax[1].plot(N_quimb, times_quimb_approx[:, 0], color='navy', label='quimb')
-ax[1].fill_between(N_quimb, times_quimb_approx[:,0]-times_quimb_approx[:,1], 
-                   times_quimb_approx[:,0]+times_quimb_approx[:,1],
-                   color='cyan', alpha=0.5)
+#Comparison of "full" computations of QFT
+ax[1].plot(N_quimb, times_quimb_full[:, 0], color=palette(1), linestyle=':', label='quimb')
+ax[1].fill_between(N_quimb, times_quimb_full[:,0]-times_quimb_full[:,1], 
+                   times_quimb_full[:,0]+times_quimb_full[:,1],
+                   color=palette(1), alpha=0.5)
 
-ax[1].plot(N_quimb, times_manual_chi[:, 0], 'r--', label='manual')
-ax[1].fill_between(N_quimb, times_manual_chi[:,0]-times_manual_chi[:,1], 
-                   times_manual_chi[:,0]+times_manual_chi[:,1],
-                   color='pink', alpha=0.5)
+ax[1].plot(N_manual, times_manual_full[:, 0], color=palette(0), linestyle='-.', label='manual')
+ax[1].fill_between(N_manual, times_manual_full[:,0]-times_manual_full[:,1], 
+                   times_manual_full[:,0]+times_manual_full[:,1],
+                   color=palette(0), alpha=0.4)
 
 #ax[1].set_ylabel('Time [s]')
 ax[1].set_xlabel('Number of qubits')
-ax[1].set_title('Time scaling for QFT circuit - $\chi=2$')
+ax[1].set_title('Time scaling fot QFT - $\chi=\\left \\lfloor \\frac{N}{2} \\right \\rfloor$')
 ax[1].legend(loc='best')
 ax[1].set_yscale('log')
 
+
 plt.show()
 fig.tight_layout()
-plt.savefig("time_scaling.pdf") 
+plt.savefig("time_scaling.pgf") 
 ```
 
 ## Testing bond dimension $\chi$
@@ -332,54 +350,64 @@ for i, x in enumerate(tqdm(chis)):
 
 ```
 
-```{python}
-fig, ax = plt.subplots(1, 2, figsize=get_figsize(.95)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
-#fig, ax = plt.subplots(1, 2, figsize=(9, 3))
+#### Save/load data
 
-# create a color palette
-palette = plt.get_cmap('Set2')
-#palette = plt.cm.rainbow(np.linspace(0,1,4))
+```{python}
+np.save("time_chis_quimb", time_chis_quimb)
+np.save("time_chis", time_chis)
+
+# time_chis = np.load(".\\data\\time_chis.npy")
+# time_chis_quimb = np.load(".\\data\\time_chis_quimb.npy")
+
+chis = np.array([2**i for i in range(2,6)])
+
+Ns = np.arange(4, 17, dtype=int)
+```
+
+```{python}
+fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
+#fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20))
 
 #Manual implementation
-ax[0].plot(Ns, times_manual_chi[:, 0], 'r--', label='$\chi=2$', alpha=0.8)
+ax[0].plot(Ns, times_manual_chi[:, 0], label='$\chi=2$', linestyle='-.', color=palette(0), alpha=0.8)
 ax[0].fill_between(Ns, times_manual_chi[:,0]-times_manual_chi[:,1], 
                    times_manual_chi[:,0]+times_manual_chi[:,1],
-                   color='pink', alpha=0.6)
+                   color=palette(0), alpha=0.6)
 
 for i in range(len(chis)):
     ax[0].plot(Ns, time_chis[i, :, 0], label='$\chi='+str(chis[i])+'$', 
-               color=palette(i))#, alpha=0.2*(len(chis)-i))
+               color=palette(i+2))#, alpha=0.2*(len(chis)-i))
     ax[0].fill_between(Ns, time_chis[i, :, 0]-time_chis[i, :, 1], 
                        time_chis[i, :, 0]+time_chis[i, :, 1],
-                       color=palette(i), alpha=0.1*(len(chis)-i))
+                       color=palette(i+2), alpha=0.1*(len(chis)-i))
 
 ax[0].set_ylabel('Time [s]')
 ax[0].set_xlabel('Number of qubits')
-ax[0].set_title('Time scaling for manual QFT circuit')
+ax[0].set_title('Manual QFT circuit')
 ax[0].legend(loc='best')
 ax[0].set_yscale('log')
 
 #Quimb implementation
-ax[1].plot(Ns, times_quimb_approx[:, 0], 'r--', label='$\chi=2$', alpha=0.8)
+ax[1].plot(Ns, times_quimb_approx[:, 0], color=palette(1), linestyle=':', label='$\chi=2$', alpha=0.8)
 ax[1].fill_between(Ns, times_quimb_approx[:,0]-times_quimb_approx[:,1], 
                    times_quimb_approx[:,0]+times_quimb_approx[:,1],
-                   color='pink', alpha=0.6)
+                   color=palette(1), alpha=0.6)
 
 for i in range(len(chis)):
     ax[1].plot(Ns, time_chis_quimb[i, :, 0], label='$\chi='+str(chis[i])+'$',
-               color=palette(i))
+               color=palette(i+2))
     ax[1].fill_between(Ns, time_chis_quimb[i, :, 0]-time_chis_quimb[i, :, 1], 
                    time_chis_quimb[i, :, 0]+time_chis_quimb[i, :, 1],
-                   color=palette(i), alpha=0.1*(len(chis)-i))
+                   color=palette(i+2), alpha=0.1*(len(chis)-i))
 
 ax[1].set_xlabel('Number of qubits')
-ax[1].set_title('Time scaling for quimb QFT circuit')
+ax[1].set_title('quimb QFT circuit')
 ax[1].legend(loc='best')
 ax[1].set_yscale('log')
 
 plt.show()
 fig.tight_layout()
-plt.savefig("chi_scaling.pdf") 
+plt.savefig("chi_scaling.pgf") 
 
 ```
 
@@ -531,16 +559,18 @@ for i, n in enumerate(tqdm(N_cirq)):
 
 ```
 
+#### Save/load data
+
 ```{python}
 # np.save("times_quimb_auto", times_quimb_auto)
 # np.save("times_manual_tot", times_manual_tot)
 # np.save("times_cirq", times_cirq)
 # np.save("times_qiskit", times_qiskit)
 
-times_quimb_auto = np.load("times_quimb_auto.npy")
-times_manual_tot = np.load("times_manual_tot.npy")
-times_cirq = np.load("times_cirq.npy")
-times_qiskit = np.load("times_qiskit.npy")
+times_quimb_auto = np.load(".\\data\\times_quimb_auto.npy")
+times_manual_tot = np.load(".\\data\\times_manual_tot.npy")
+times_cirq = np.load(".\\data\\times_cirq.npy")
+times_qiskit = np.load(".\\data\\times_qiskit.npy")
 
 N_tot =  np.arange(4, 51, dtype=int)
 N_man_tot = np.arange(4, 26, dtype=int)
@@ -550,32 +580,32 @@ N_qiskit = np.arange(4, 26, dtype=int)
 ```
 
 ```{python}
-fig, ax = plt.subplots(1, 1, figsize=(6.704026567040266, 4.143316279913161)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
-#fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=get_figsize(0.95)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
+#fig, ax = plt.subplots(figsize=get_figsize(0.95))
 
 #quimb implementation
-plt.plot(N_tot, times_quimb_auto[:, 0], color='dodgerblue', label='quimb')
+plt.plot(N_tot, times_quimb_auto[:, 0], color=palette(1), linestyle=':', label='quimb')
 plt.fill_between(N_tot, times_quimb_auto[:,0]-times_quimb_auto[:,1], 
                    times_quimb_auto[:,0]+times_quimb_auto[:,1],
-                   color='aquamarine', alpha=0.6)
+                   color=palette(1), alpha=0.6)
 
 #manual implementation
-plt.plot(N_man_tot, times_manual_tot[:, 0], 'r--', label='manual, $\chi=2$')
+plt.plot(N_man_tot, times_manual_tot[:, 0], color=palette(0), linestyle='-.', label='manual, $\chi=2$')
 plt.fill_between(N_man_tot, times_manual_tot[:,0]-times_manual_tot[:,1], 
                    times_manual_tot[:,0]+times_manual_tot[:,1],
-                   color='pink', alpha=0.6)
+                   color=palette(0), alpha=0.6)
 
 #cirq
-plt.plot(N_cirq, times_cirq[:, 0], color='orange', label='cirq')
+plt.plot(N_cirq, times_cirq[:, 0], color='plum', label='cirq', alpha=0.8)
 plt.fill_between(N_cirq, times_cirq[:,0]-times_cirq[:,1], 
                    times_cirq[:,0]+times_cirq[:,1],
-                   color='bisque', alpha=0.6)
+                   color='thistle', alpha=0.6)
 
 #qiskit
-plt.plot(N_qiskit, times_qiskit[:, 0], color='springgreen', label='qiskit')
+plt.plot(N_qiskit, times_qiskit[:, 0], color='cadetblue', label='qiskit', alpha=0.8)
 plt.fill_between(N_qiskit, times_qiskit[:,0]-times_qiskit[:,1], 
                    times_qiskit[:,0]+times_qiskit[:,1],
-                   color='palegreen', alpha=0.6)
+                   color='paleturquoise', alpha=0.6)
 
 plt.ylabel('Time [s]')
 plt.xlabel('Number of qubits')
@@ -586,7 +616,7 @@ plt.yscale('log')
 plt.show()
 
 fig.tight_layout()
-plt.savefig("max_n_qubits.pdf") #Save as pdf in the "report_plots" folder
+plt.savefig("max_n_qubits.pgf") #Save as pdf in the "report_plots" folder
 
 ```
 
