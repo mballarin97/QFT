@@ -16,18 +16,23 @@ jupyter:
 ```{python}
 # Visualization
 import matplotlib.pyplot as plt
+import matplotlib
 from tqdm import tqdm
 from time import time
 from copy import deepcopy
+# %config InlineBackend.figure_format = 'svg' # Makes the images look nice
 
 # Numpy
 import numpy as np
 from numpy import linalg as LA
 
+#importing cirq
+import cirq
+
 # importing Qiskit
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit.circuit import library as lb
-# %config InlineBackend.figure_format = 'svg' # Makes the images look nice
+from qiskit.ignis.verification import get_ghz_simple 
 
 # Tensor networks
 import quimb as quimb
@@ -41,16 +46,17 @@ from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubi
 
 from gates import CPHASE, cphase_swap_qiskit, cphase_swap_quimb
 
-from circuit import qft_circuit_qiskit, qft_circuit_swap, circ_data, MPS_circ
+from circuit import qft_circuit_swap_full, qft_circuit_swap_approx
+from circuit import qft_circuit_qiskit, circ_data, MPS_circ 
 ```
 
 ```{python}
 # Plotting LateX figures
 matplotlib.use("pgf")
 matplotlib.rcParams.update({ 
-    "pgf.texsystem": "pdflatex",
+    #"pgf.texsystem": "pdflatex",
     'font.family': 'serif',
-    'text.usetex': True,
+    'text.usetex': False,
     'pgf.rcfonts': False,
     "pgf.preamble": [ r"\usepackage[utf8]{inputenc}" ]
 })
@@ -63,12 +69,12 @@ BIGGEST_SIZE = 12
 
 #All sizes are customizable here
 plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
-plt.rc('axes', titlesize=BIGGER_SIZE)   # fontsize of the axes title
+plt.rc('axes', titlesize=BIGGER_SIZE)    # fontsize of the axes title
 plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
 plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
-plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
-plt.rc('figure', titlesize=BIGGEST_SIZE)  # fontsize of the figure title
+plt.rc('legend', fontsize=MEDIUM_SIZE)   # legend fontsize
+plt.rc('figure', titlesize=BIGGEST_SIZE) # fontsize of the figure title
 #plt.rcParams['axes.facecolor'] = 'white'
 ```
 
@@ -91,7 +97,11 @@ def get_figsize(wf=0.5, hf=(5.**0.5-1.0)/2.0, ):
     return [fig_width, fig_height]
 ```
 
-# Quimb-qiskit interface
+```{python}
+print(get_figsize(0.95))
+```
+
+## Quimb-qiskit interface
 
 ```{python}
 # Controlled NOT
@@ -102,151 +112,142 @@ H = quimb.gen.operators.hadamard()
 
 # SWAP
 SWAP = quimb.gen.operators.swap()
-# Dictionary of the gates
 
+# Dictionary of the gates
 gates = {'h': H, 
         'cx': CNOT,
         'cp': CPHASE,
         'swap': SWAP}
 ```
 
-## Tests to do:
+## Time performance tests
 
--Plots for timings (Bea). Run the QFT algorithm (manual and quimb) on the same state (e.g. GHZ). Plot the execution time as function of the number of qubits in the state (in a log-plot). For each algorithm, consider both the "full" version, with no approximation, and one where the bond dimension is fixed to chi (e.g. =2). Consider making one subplot per algorithm, but keep them side-by-side with shared y, so that they are comparable. 
-Do the same kind of plot for quimb with different values of chi (e.g. 2, 4, 8, 16...). 
 
-```{python}
-#Example 
-
-N=2
-state = np.zeros(2**N)
-state[0] = 1
-
-print("Initial state:")
-print_state(state)
-
-state = state.reshape([2] * N)
-state = to_full_MPS(state, d=2, N=N) #convert to MPS
-
-H = np.array(quimb.hadamard())
-state1 = apply_one_qubit_gate(H, 0, state)
-
-print("Hadamard to pos=0")
-print_state(to_dense(state1).flatten())
-
-CNOT = quimb.controlled('not')
-
-pos = 0
-state2 = apply_two_qubit_gate_full(CNOT, pos, state1)
-
-print(f"Apply CNOT to sites: ({pos}, {pos+1})")
-state2 = to_dense(state2).flatten()
-print("New state:")
-print_state(state2)
-```
-
-### Quimb - optimal $\chi$
+### Quimb - $\chi=2$
 
 ```{python}
-N_qub = np.arange(4, 17, dtype=int)
-total_time_quimb = np.zeros(2)
+#run QFT on different number of qubits, store execution times
+#quimb implementation with bond dimension chi=2
+N_quimb = np.arange(4, 17, dtype=int)
 
-for n_qub in tqdm(N_qub):
-    time_quimb = []
-    for _ in range(10):
+times_quimb_approx = np.zeros( (len(N_quimb), 2) )
+
+for i, n in enumerate(tqdm(N_quimb)):
+    times = []
+    for _ in range(50):
         start = time()
-        state = quimb.tensor.tensor_gen.MPS_ghz_state(n_qub)
-        qc = QuantumCircuit(n_qub)
-        qft_circuit_qiskit(qc, n_qub)
-        psi0 = MPS_circ(qc, gates, init_state=state)
+        #GHZ initial state
+        state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+        
+        qc = QuantumCircuit(n)
+        qft_circuit_qiskit(qc, n)
+        psi0 = MPS_circ(qc, gates, init_state=state, chi=2)
         psi_dense = psi0.to_dense()
-        time_quimb.append( time()-start )
-    total_time_quimb = np.vstack( (total_time_quimb, [np.mean(time_quimb), np.std(time_quimb) ]) )
+        
+        times.append( time()-start )
     
-total_time_quimb = total_time_quimb[1:,:]
+    times_quimb_approx[i, :] = ([np.mean(times), np.std(times) ])
+
 ```
 
 ### Quimb - full
 
 ```{python}
-N_qub_chi = np.arange(4, 17, dtype=int)
-total_time_quimb_chi = np.zeros(2)
+#run QFT on different number of qubits, store execution times
+#quimb implementation with maximum choice of bond dimension
+times_quimb_full = np.zeros( (len(N_quimb), 2) )
 
-for n_qub in tqdm(N_qub_chi):
-    time_quimb = []
-    for _ in range(10):
+for i, n in enumerate(tqdm(N_quimb)):
+    times = []
+    for _ in range(50):
         start = time()
-        state = quimb.tensor.tensor_gen.MPS_ghz_state(n_qub)
-        chi =  2**(np.floor(N/2))
-        qc = QuantumCircuit(n_qub)
-        qft_circuit_qiskit(qc, n_qub)
+        #GHZ initial state
+        state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+        #choose the maximum bond dimension possible
+        chi = 2**(np.floor(n/2)) 
+        
+        qc = QuantumCircuit(n)
+        qft_circuit_qiskit(qc, n)
         psi0 = MPS_circ(qc, gates, init_state=state, chi=chi)
         psi_dense = psi0.to_dense()
-        time_quimb.append( time()-start )
-    total_time_quimb_chi = np.vstack( (total_time_quimb_chi, [np.mean(time_quimb), np.std(time_quimb) ]) )
-    
-total_time_quimb_chi = total_time_quimb_chi[1:,:]
-```
-
-### Manual
-
-```{python}
-total_time_manual = np.zeros(2)
-N_qub_m = np.arange(4, 12, dtype=int)
-
-for N in tqdm(N_qub_m):
-    time_manual = []
-    for _ in range(10):
-        start = time()
-        state = np.zeros(2**N)
-        state[0] = 1
-        state[-1] = 1
-        state = state / np.sqrt(2)
-        state = to_full_MPS(state, d=2, N=N)
-        result = qft_circuit_swap(state, N, chi=max_bond_dimension(state))
-        result = to_dense(result).flatten()
-        time_manual.append( time()-start )
         
-    total_time_manual = np.vstack( (total_time_manual, [np.mean(time_manual), np.std(time_manual) ]) )
+        times.append( time()-start )
     
-total_time_manual = total_time_manual[1:,:]
+    times_quimb_full[i, :] = ([np.mean(times), np.std(times) ])
+
 ```
 
 ### Manual - with bond dimension $\chi=2$
 
 ```{python}
-total_time_chi = np.zeros(2)
-N_qub_m_chi = np.arange(4, 17, dtype=int)
+#run QFT on different number of qubits, store execution times
+#manual implementation with bond dimension chi fixed to 2
 
-for N in tqdm(N_qub_m_chi):
-    time_manual = []
-    for _ in range(10):
+times_manual_chi = np.zeros( (len(N_quimb), 2) )
+
+for i,n in enumerate(tqdm(N_quimb)):
+    times = []
+    for _ in range(50):
         start = time()
-        state = np.zeros(2**N)
+        #GHZ initial state
+        state = np.zeros(2**n)
         state[0] = 1
         state[-1] = 1
         state = state / np.sqrt(2)
-        state = to_approx_MPS(state, N=N, d=2, chi=2)
-        result = qft_circuit_swap(state, N, chi=2)
-        result = to_dense(result).flatten()
-        time_manual.append( time()-start )
         
-    total_time_chi = np.vstack( (total_time_chi, [np.mean(time_manual), np.std(time_manual) ]) )
+        state = to_approx_MPS(state, N=n, d=2, chi=2)
+        result = qft_circuit_swap_approx(state, n, chi=2)
+        result = to_dense(result).flatten()
+        
+        times.append( time()-start )
+        
+    times_manual_chi[i,:] = ( [np.mean(times), np.std(times) ]) 
     
-total_time_chi = total_time_chi[1:,:]
+
+```
+
+### Manual - full
+
+```{python}
+#run QFT on different number of qubits, store execution times
+#manual implementation with maximum choice of bond dimension
+N_manual = np.arange(4, 13, dtype=int)
+
+times_manual_full = np.zeros( (len(N_manual), 2) )
+
+for i,n in enumerate(tqdm(N_manual)):
+    times = []
+    for _ in range(50):
+        start = time()
+        #GHZ initial state
+        state = np.zeros(2**n)
+        state[0] = 1
+        state[-1] = 1
+        state = state / np.sqrt(2)
+        
+        state = to_full_MPS(state, d=2, N=n)
+        result = qft_circuit_swap_full(state, n)
+        result = to_dense(result).flatten()
+        
+        times.append( time()-start )
+        
+    times_manual_full[i,:] = ( [np.mean(times), np.std(times) ]) 
+    
 ```
 
 ```{python}
-fig, ax = plt.subplots(1, 2, figsize=(9, 3))
+fig, ax = plt.subplots(1, 2, figsize=get_figsize(.95)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
+#fig, ax = plt.subplots(1, 2, figsize=(9, 3))
 
-ax[0].plot(N_qub_chi, total_time_quimb_chi[:, 0], color='navy', label='quimb')
-ax[0].fill_between(N_qub_chi, total_time_quimb_chi[:,0]-total_time_quimb_chi[:,1], 
-                   total_time_quimb_chi[:,0]+total_time_quimb_chi[:,1],
+#Comparison of "full" computations of QFT
+ax[0].plot(N_quimb, times_quimb_full[:, 0], color='navy', label='quimb')
+ax[0].fill_between(N_quimb, times_quimb_full[:,0]-times_quimb_full[:,1], 
+                   times_quimb_full[:,0]+times_quimb_full[:,1],
                    color='cyan', alpha=0.5)
 
-ax[0].plot(N_qub_m, total_time_manual[:, 0], 'r--', label='manual')
-ax[0].fill_between(N_qub_m, total_time_manual[:,0]-total_time_manual[:,1], 
-                   total_time_manual[:,0]+total_time_manual[:,1],
+ax[0].plot(N_manual, times_manual_full[:, 0], 'r--', label='manual')
+ax[0].fill_between(N_manual, times_manual_full[:,0]-times_manual_full[:,1], 
+                   times_manual_full[:,0]+times_manual_full[:,1],
                    color='pink', alpha=0.5)
 
 ax[0].set_ylabel('Time [s]')
@@ -255,47 +256,51 @@ ax[0].set_title('Time scaling for QFT circuit - full')
 ax[0].legend(loc='best')
 ax[0].set_yscale('log')
 
-ax[1].plot(N_qub, total_time_quimb[:, 0], color='navy', label='quimb')
-ax[1].fill_between(N_qub, total_time_quimb[:,0]-total_time_quimb[:,1], 
-                   total_time_quimb[:,0]+total_time_quimb[:,1],
+#Comparison of "approximated" computations of QFT
+ax[1].plot(N_quimb, times_quimb_approx[:, 0], color='navy', label='quimb')
+ax[1].fill_between(N_quimb, times_quimb_approx[:,0]-times_quimb_approx[:,1], 
+                   times_quimb_approx[:,0]+times_quimb_approx[:,1],
                    color='cyan', alpha=0.5)
 
-ax[1].plot(N_qub_m_chi, total_time_chi[:, 0], 'r--', label='manual')
-ax[1].fill_between(N_qub_chi, total_time_chi[:,0]-total_time_chi[:,1], 
-                   total_time_chi[:,0]+total_time_chi[:,1],
+ax[1].plot(N_quimb, times_manual_chi[:, 0], 'r--', label='manual')
+ax[1].fill_between(N_quimb, times_manual_chi[:,0]-times_manual_chi[:,1], 
+                   times_manual_chi[:,0]+times_manual_chi[:,1],
                    color='pink', alpha=0.5)
 
 #ax[1].set_ylabel('Time [s]')
 ax[1].set_xlabel('Number of qubits')
-ax[1].set_title('Time scaling for QFT circuit - approx.')
+ax[1].set_title('Time scaling for QFT circuit - $\chi=2$')
 ax[1].legend(loc='best')
 ax[1].set_yscale('log')
 
 plt.show()
 fig.tight_layout()
-
+plt.savefig("time_scaling.pdf") 
 ```
+
+## Testing bond dimension $\chi$
+
 
 ### Different $\chi$ for manual method
 
 ```{python}
-chis = np.array([2**i for i in range(2,5)])
+chis = np.array([2**i for i in range(2,6)])
 
 Ns = np.arange(4, 17, dtype=int)
 
 time_chis = np.zeros( (len(chis), len(Ns), 2) )
 
-for i, x in enumerate(chis):
-    for j, N in tqdm(enumerate(Ns)):
+for i, x in enumerate(tqdm(chis)):
+    for j, N in enumerate(Ns):
         times = []
-        for _ in range(10):
+        for _ in range(50):
             start = time()
             state = np.zeros(2**N)
             state[0] = 1
             state[-1] = 1
             state = state / np.sqrt(2)
             state = to_approx_MPS(state, N=N, d=2, chi=x)
-            result = qft_circuit_swap(state, N, chi=x)
+            result = qft_circuit_swap_approx(state, N, chi=x)
             result = to_dense(result).flatten()
             times.append( time()-start )
 
@@ -303,51 +308,285 @@ for i, x in enumerate(chis):
 
 ```
 
-```{python}
-plt.plot(N_qub, total_time_quimb[:, 0], color='navy', label='quimb')
-plt.fill_between(N_qub, total_time_quimb[:,0]-total_time_quimb[:,1], 
-                   total_time_quimb[:,0]+total_time_quimb[:,1],
-                   color='cyan', alpha=0.5)
+### Different $\chi$ for quimb implementation
 
-plt.plot(N_qub_m_chi, total_time_chi[:, 0], 'r--', label='manual')
-plt.fill_between(N_qub_chi, total_time_chi[:,0]-total_time_chi[:,1], 
-                   total_time_chi[:,0]+total_time_chi[:,1],
-                   color='pink', alpha=0.5)
+```{python}
+time_chis_quimb = np.zeros( (len(chis), len(Ns), 2) )
+
+for i, x in enumerate(tqdm(chis)):
+    for j, n in enumerate(Ns):
+        times = []
+        for _ in range(50):
+            start = time()
+            #GHZ initial state
+            state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+
+            qc = QuantumCircuit(n)
+            qft_circuit_qiskit(qc, n)
+            psi0 = MPS_circ(qc, gates, init_state=state, chi=x)
+            psi_dense = psi0.to_dense()
+
+            times.append( time()-start )
+
+        time_chis_quimb[i, j, :] = ([np.mean(times), np.std(times) ])
+
+```
+
+```{python}
+fig, ax = plt.subplots(1, 2, figsize=get_figsize(.95)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
+#fig, ax = plt.subplots(1, 2, figsize=(9, 3))
+
+# create a color palette
+palette = plt.get_cmap('Set2')
+#palette = plt.cm.rainbow(np.linspace(0,1,4))
+
+#Manual implementation
+ax[0].plot(Ns, times_manual_chi[:, 0], 'r--', label='$\chi=2$', alpha=0.8)
+ax[0].fill_between(Ns, times_manual_chi[:,0]-times_manual_chi[:,1], 
+                   times_manual_chi[:,0]+times_manual_chi[:,1],
+                   color='pink', alpha=0.6)
 
 for i in range(len(chis)):
-    plt.plot(Ns, time_chis[i, :, 0], label='chi='+str(chis[i]))
-    plt.fill_between(Ns, time_chis[i, :, 0]-time_chis[i, :, 1], 
-                   time_chis[i, :, 0]+time_chis[i, :, 1],
-                   alpha=0.5)
+    ax[0].plot(Ns, time_chis[i, :, 0], label='$\chi='+str(chis[i])+'$', 
+               color=palette(i))#, alpha=0.2*(len(chis)-i))
+    ax[0].fill_between(Ns, time_chis[i, :, 0]-time_chis[i, :, 1], 
+                       time_chis[i, :, 0]+time_chis[i, :, 1],
+                       color=palette(i), alpha=0.1*(len(chis)-i))
 
+ax[0].set_ylabel('Time [s]')
+ax[0].set_xlabel('Number of qubits')
+ax[0].set_title('Time scaling for manual QFT circuit')
+ax[0].legend(loc='best')
+ax[0].set_yscale('log')
+
+#Quimb implementation
+ax[1].plot(Ns, times_quimb_approx[:, 0], 'r--', label='$\chi=2$', alpha=0.8)
+ax[1].fill_between(Ns, times_quimb_approx[:,0]-times_quimb_approx[:,1], 
+                   times_quimb_approx[:,0]+times_quimb_approx[:,1],
+                   color='pink', alpha=0.6)
+
+for i in range(len(chis)):
+    ax[1].plot(Ns, time_chis_quimb[i, :, 0], label='$\chi='+str(chis[i])+'$',
+               color=palette(i))
+    ax[1].fill_between(Ns, time_chis_quimb[i, :, 0]-time_chis_quimb[i, :, 1], 
+                   time_chis_quimb[i, :, 0]+time_chis_quimb[i, :, 1],
+                   color=palette(i), alpha=0.1*(len(chis)-i))
+
+ax[1].set_xlabel('Number of qubits')
+ax[1].set_title('Time scaling for quimb QFT circuit')
+ax[1].legend(loc='best')
+ax[1].set_yscale('log')
+
+plt.show()
+fig.tight_layout()
+plt.savefig("chi_scaling.pdf") 
+
+```
+
+## Testing maximum number of Qubits
+
+
+### Manual implementation - $\chi=2$
+
+```{python}
+#run QFT on different number of qubits, store execution times
+#manual implementation with bond dimension chi fixed to 2
+N_man_tot = np.arange(4, 26, dtype=int)
+
+times_manual_tot = np.zeros( (len(N_man_tot), 2) )
+
+for i,n in enumerate(tqdm(N_man_tot)):
+    times = []
+    for _ in range(10):
+        start = time()
+        #GHZ initial state
+        state = np.zeros(2**n)
+        state[0] = 1
+        state[-1] = 1
+        state = state / np.sqrt(2)
+        
+        state = to_approx_MPS(state, N=n, d=2, chi=2)
+        result = qft_circuit_swap_approx(state, n, chi=2)
+        result = to_dense(result).flatten()
+        
+        times.append( time()-start )
+        
+    times_manual_tot[i,:] = ( [np.mean(times), np.std(times) ]) 
+    
+
+```
+
+### Quimb - authomatic $\chi$
+
+```{python}
+#run QFT on different number of qubits, store execution times
+#quimb implementation with authomatic choice of bond dimension
+N_tot =  np.arange(4, 51, dtype=int)
+
+times_quimb_auto = np.zeros( (len(N_tot), 2) )
+
+for i, n in enumerate(tqdm(N_tot)):
+    times = []
+    for _ in range(10):
+        start = time()
+        #GHZ initial state
+        state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+        
+        qc = QuantumCircuit(n)
+        qft_circuit_qiskit(qc, n)
+        psi0 = MPS_circ(qc, gates, init_state=state)
+        #psi_dense = psi0.to_dense()
+        
+        times.append( time()-start )
+    
+    times_quimb_auto[i, :] = ([np.mean(times), np.std(times) ])
+
+```
+
+### Qiskit
+
+```{python}
+#run QFT on different number of qubits, store execution times
+#qiskit implementation 
+N_qiskit = np.arange(4, 26, dtype=int)
+
+times_qiskit = np.zeros( (len(N_qiskit), 2) )
+
+for i, n in enumerate(tqdm(N_qiskit)):
+    times = []
+    for _ in range(10):
+        start = time()
+        #GHZ initial state
+        state = get_ghz_simple(n, measure=False)
+        #QFT circuit
+        qc = QuantumCircuit(n)
+        qft_circuit_qiskit(qc, n)
+        #combine the two circuits
+        qc = state + qc
+        # Select the QasmSimulator from the Aer provider
+        simulator = Aer.get_backend('qasm_simulator')
+        # Execute 
+        result = execute(qc, simulator, shots=1).result()
+        
+        times.append( time()-start )
+    
+    times_qiskit[i, :] = ([np.mean(times), np.std(times) ])
+
+```
+
+### Cirq
+
+```{python}
+def cphase_swap_cirq(ctrl, target, phase):
+    yield cirq.CZ(ctrl, target) ** phase
+    yield cirq.SWAP(ctrl, target)
+
+def qft_circuit_cirq(qubits, circuit=[]):
+    """
+    Build a circuit implementing the QFT algorithm on the given @qubits. 
+    The order of @qubits is preserved by SWAP operations.
+    Implemented using only local operations, i.e. gates acting on neighbouring qubits.
+    Adapted from: https://github.com/quantumlib/Cirq/blob/master/examples/quantum_fourier_transform.py and extended to
+    n generic qubits through recursion.
+    """
+    n = len(qubits)
+    assert n > 0, "Number of qubits must be > 0"
+    
+    if (n == 1):
+        circuit.append(cirq.H(qubits[0]))
+        return cirq.Circuit(circuit, strategy=cirq.InsertStrategy.EARLIEST)
+    else:
+        circuit.append(cirq.H(qubits[0]))
+        circuit.extend(cphase_swap_cirq(qubits[i], qubits[i+1], 1/2**(i+1)) for i in range(n-1))
+        return qft_circuit_cirq(qubits[:n-1], circuit)
+
+```
+
+```{python}
+#run QFT on different number of qubits, store execution times
+#qiskit implementation 
+N_cirq = np.arange(4, 26, dtype=int)
+
+times_cirq = np.zeros( (len(N_cirq), 2) )
+
+for i, n in enumerate(tqdm(N_cirq)):
+    times = []
+    for _ in range(10):
+        start = time()
+        #GHZ initial state
+        state = np.zeros(2**n)
+        state[0] = 1
+        state[-1] = 1
+        state = state / np.sqrt(2)
+        #QFT circuit
+        qubits = cirq.LineQubit.range(n)
+        qc = qft_circuit_cirq(qubits, [])
+
+        simulator = cirq.Simulator()
+        result = simulator.simulate(qc, initial_state=state)
+
+        times.append( time()-start )
+    
+    times_cirq[i, :] = ([np.mean(times), np.std(times) ])
+
+```
+
+```{python}
+# np.save("times_quimb_auto", times_quimb_auto)
+# np.save("times_manual_tot", times_manual_tot)
+# np.save("times_cirq", times_cirq)
+# np.save("times_qiskit", times_qiskit)
+
+times_quimb_auto = np.load("times_quimb_auto.npy")
+times_manual_tot = np.load("times_manual_tot.npy")
+times_cirq = np.load("times_cirq.npy")
+times_qiskit = np.load("times_qiskit.npy")
+
+N_tot =  np.arange(4, 51, dtype=int)
+N_man_tot = np.arange(4, 26, dtype=int)
+N_cirq = np.arange(4, 26, dtype=int)
+N_qiskit = np.arange(4, 26, dtype=int)
+
+```
+
+```{python}
+fig, ax = plt.subplots(1, 1, figsize=(6.704026567040266, 4.143316279913161)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
+#fig, ax = plt.subplots()
+
+#quimb implementation
+plt.plot(N_tot, times_quimb_auto[:, 0], color='dodgerblue', label='quimb')
+plt.fill_between(N_tot, times_quimb_auto[:,0]-times_quimb_auto[:,1], 
+                   times_quimb_auto[:,0]+times_quimb_auto[:,1],
+                   color='aquamarine', alpha=0.6)
+
+#manual implementation
+plt.plot(N_man_tot, times_manual_tot[:, 0], 'r--', label='manual, $\chi=2$')
+plt.fill_between(N_man_tot, times_manual_tot[:,0]-times_manual_tot[:,1], 
+                   times_manual_tot[:,0]+times_manual_tot[:,1],
+                   color='pink', alpha=0.6)
+
+#cirq
+plt.plot(N_cirq, times_cirq[:, 0], color='orange', label='cirq')
+plt.fill_between(N_cirq, times_cirq[:,0]-times_cirq[:,1], 
+                   times_cirq[:,0]+times_cirq[:,1],
+                   color='bisque', alpha=0.6)
+
+#qiskit
+plt.plot(N_qiskit, times_qiskit[:, 0], color='springgreen', label='qiskit')
+plt.fill_between(N_qiskit, times_qiskit[:,0]-times_qiskit[:,1], 
+                   times_qiskit[:,0]+times_qiskit[:,1],
+                   color='palegreen', alpha=0.6)
 
 plt.ylabel('Time [s]')
 plt.xlabel('Number of qubits')
-plt.title('Time scaling for QFT circuit - approx')
+plt.title('Time scaling for QFT circuit')
 plt.legend(loc='best')
 plt.yscale('log')
 
-```
+plt.show()
 
-```{python}
-
-```
-
-```{python}
-#1. Create the figure
-fig, ax = plt.subplots(figsize=get_figsize(.45)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
-
-#2. Do the plot as usual (don't forget axes labels!)
-xs = np.linspace(-np.pi, np.pi, 100)
-plt.plot(xs, np.sin(xs), c='r', label='sin')
-plt.xlabel('x')
-plt.ylabel('y')
-
-#3. Save the result. Note that showing the figure here in Colab (e.g. with plt.show()) may prevent the cell from saving the pdf (for some reason). So, when exporting, look at the figure from the .pdf
 fig.tight_layout()
-plt.savefig("example_test.pdf") #Save as pdf in the "report_plots" folder
-
-#4. Check that the generated .pdf is satisfactory. It will have the correct dimensions for the Latex report.
+plt.savefig("max_n_qubits.pdf") #Save as pdf in the "report_plots" folder
 
 ```
 
