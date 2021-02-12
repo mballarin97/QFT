@@ -37,14 +37,15 @@ from qiskit.quantum_info import random_statevector
 import quimb as quimb
 from ncon import ncon
 
-from helper import print_state, right_contract, left_contract
-from helper import to_full_MPS, to_dense, to_approx_MPS
+from MPS_QFT.helper import print_state, right_contract, left_contract
+from MPS_QFT.helper import to_full_MPS, to_dense, to_approx_MPS
 
-from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
+from MPS_QFT.manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
 
-from gates import CPHASE, cphase_swap_qiskit, cphase_swap_quimb
+from MPS_QFT.gates import CPHASE, cphase_swap_qiskit, cphase_swap_quimb
 
-from circuit import qft_circuit_qiskit, qft_circuit_swap_full, qft_circuit_swap_approx, circ_data, MPS_circ
+from MPS_QFT.circuit import qft_circuit_qiskit, qft_circuit_swap_full, qft_circuit_swap_approx, circ_data, MPS_circ
+from MPS_QFT.circuit import GHZ_qiskit, reverse_qiskit, qiskit_get_statevect
 ```
 
 ```{python}
@@ -84,92 +85,6 @@ We will use the `_q` notation to indicate the quimb version and `_m` for the man
 We then apply a quantum gate (e.g. CNOT) to both states, and do the same plot. Apply the QFT to both states, and repeat again the same plot. 
 
 ```{python}
-def GHZ_qiskit(circ):
-    """
-    Generates a GHZ state in the quantum circuit @circ composed by @n qubits. Acts in place
-    
-    Parameters
-    ----------
-    circ: Quantum Circuit
-        The quantum circuit in the state '00...0' where to build the GHZ
-        
-    Returns
-    -------
-    None
-    """
-    n = circ.num_qubits
-    circ.h(0)
-    for i in range(1, n):
-        circ.cx( 0, i)
-        
-def Fidelity(psi, phi):
-    """
-    Returns the fidelity bewteen two quantum states @psi, @phi defined as |<@psi|@phi>|^2
-    
-    Parameters
-    ----------
-    psi: complex np.array or quimb.core.qarray
-        Quantum state
-    phi: complex np.array or quimb.core.qarray
-        Quantum state
-        
-    Returns
-    -------
-    Fidelity: double real
-        Fidelity of the two quantum states
-    """
-
-    # Enforcing normalization
-    psi /= np.sqrt( np.abs(np.sum( psi*psi.conj() ))   )
-    phi /= np.sqrt(  np.abs(np.sum( phi*phi.conj() )) )
-    
-    return np.abs( np.dot(psi, phi.conj()) )**2
-
-
-def reverse_qiskit(qiskit_dense, N):
-    """
-        Reverse the ordering of a qiskit state, in which the 0-th qubit is the leftmost 
-        (for example in |1000> the 0-th qubit is in the state 1), to match the more usual notation
-        in which the 0-th qubit is the rightmost.
-        
-        Parameter
-        ---------
-        qiskit_dense: array_like
-            Dense qiskit state vector
-        N: int
-            Number of qubits which forms @qiskit_dense
-            
-        Returns
-        -------
-        qiskit_reordered: array_like
-            Reordered dense state_vector
-    """
-    assert 2**N==len(qiskit_dense), f'qiskit_dense is not the statevector representing {N} qubits, since its length is length is {len(qiskit_dense)} while it should be {2**N}'
-        
-    indexing = np.array( [ int( '{:0{width}b}'.format(i, width=N)[::-1], 2) for i in range(2**N) ] )
-    qiskit_reordered = qiskit_dense[indexing]
-    
-    return qiskit_reordered
-
-def qiskit_get_statevect(qc):
-    """
-        Returns the statevector of the qiskit quantum circuit @qc in the reversed order
-        
-        Parameters
-        ----------
-        qc: Quantum circuit
-            Quantum circuit of which we want the statevector
-            
-        Returns
-        -------
-        st: array_like
-            Statevector of the quantum circuit after the application of the reverse operation on the qubit's ordering
-    """
-    N = qc.num_qubits
-    st = reverse_qiskit(execute(qc, Aer.get_backend('statevector_simulator')).result().get_statevector(), N)
-    
-    return st
-
 class TestingData():
     """
         Class to eliminate global variables, keeping tidy the informations constant along the testing
@@ -366,6 +281,58 @@ ax[3].legend()
 fig.tight_layout()
 if LateX: plt.savefig("Plots/PerfVsChi.pgf")
 plt.show()
+```
+
+## Fidelity w.r.t. gates with fixed bond dimension $\chi$
+
+```{python}
+from gates import cphase_swap_qiskit
+# --- Parameters ---
+tx = TestingData(N=5, d=2)
+chi = 2
+qc = QuantumCircuit(tx.N)
+
+# --- Tracker ---
+fid = []
+
+# --- Random state creation ---
+random_state = random_statevector(tx.dim).data 
+qc_ran = Initialize(random_state).definition
+random_state4MPS = reverse_qiskit(random_state, tx.N) # Put the state in the correct order
+```
+
+```{python}
+MPS = quimb.tensor.tensor_1d.MatrixProductState.from_dense( np.matrix(random_state4MPS), 
+                                                                         dims=[d for _ in range(tx.N)], max_bond=chi)
+
+fid.append( Fidelity(MPS.to_dense()[:,0], qiskit_get_statevect(qc_ran)) )
+
+for n in tqdm(range(tx.N, 0, -1)):
+    if n == 0: pass
+    elif n==1: 
+        qc.h(0)
+        qc_ran.h(0)
+    else:
+        qc.h(0)
+        qc_ran.h(0)
+        for i in range(n-1):
+            cphase_swap_qiskit(qc, i, i+1, np.pi*1/2**(i+1))
+            cphase_swap_qiskit(qc_ran, i, i+1, np.pi*1/2**(i+1))
+        
+        MPS = quimb.tensor.tensor_1d.MatrixProductState.from_dense( np.matrix(random_state4MPS), 
+                                                                         dims=[d for _ in range(tx.N)], max_bond=chi)
+        MPS_1 = MPS_circ(qc, init_state=MPS)
+        MPS_dense = MPS_1.to_dense()[:,0]
+        res = qiskit_get_statevect(qc_ran)
+        fid.append( Fidelity(res, MPS_dense) )
+```
+
+```{python}
+plt.plot(fid)
+```
+
+```{python}
+fid
 ```
 
 ```{python}
