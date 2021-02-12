@@ -44,11 +44,7 @@ def print_state(dense_state):
 #Helper functions
 def right_contract(states):
     """
-    Given the N right-most *states* of a MPS, computes their contraction with themselves, as follows:
-    
-    - o  -  o  -  o  -  o
-      |     |     |     |
-    - o.H - o.H - o.H - o.H
+    Given the N right-most *states* of a MPS, computes their contraction with themselves, as in the Example
     
      Parameters
     ----------
@@ -59,6 +55,12 @@ def right_contract(states):
     -------
     Matrix: order 2 tensor
         Returns a order 2 tensor.
+
+    Examples
+    --------
+    >>>  - o  -  o  -  o  -  o 
+    >>>    |     |     |     | 
+    >>>  o.H - o.H - o.H - o.H 
     """
     #Add np.conjugate (when we will use complex numbers)
     
@@ -87,11 +89,7 @@ def right_contract(states):
 
 def left_contract(states):
     """
-    Given the N left-most *states* of a MPS, computes their contraction with themselves, as follows:
-    
-    o  -  o  -  o  -  o   -
-    |     |     |     |
-    o.H - o.H - o.H - o.H -
+    Given the N left-most *states* of a MPS, computes their contraction with themselves, as in the Example.
     
     Parameters
     ----------
@@ -102,6 +100,12 @@ def left_contract(states):
     -------
     Matrix: order 2 tensor
         Returns a order 2 tensor.
+
+    Examples
+    --------
+    >>> o  -  o  -  o  -  o   -
+    >>> |     |     |     |
+    >>> o.H - o.H - o.H - o.H -
     """
     
     #Convention is the following (idk if it's the most efficient...)
@@ -159,13 +163,14 @@ def to_full_MPS(dense_state, N, d=2):
     -------
     MPS : list of *N* tensors
         List of *N* tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
-        all the others are of order 3.
-
-         U1 - U2 - U3 - ... - UN 
-         |    |    |          |
-
+        all the others are of order 3. We can see the sketch in the Example.
         The index ordering convention is from left-to-right. 
         For instance, the "left" index of U2 is the first, the "bottom" one is the second, and the "right" one is the third.
+
+    Examples
+    --------
+    >>> U1 - U2 - U3 - ... - UN 
+    >>> |    |    |          |
     """
     
     assert N > 0, "Number of sites must be > 0"
@@ -194,9 +199,7 @@ def to_full_MPS(dense_state, N, d=2):
 
 def to_dense(MPS):
     """
-    Given a list of N tensors *MPS* [U1, U2, ..., UN] , representing a Matrix Product State, perform the following contraction:
-     U1 - U2 - ... - UN
-      |    |          |
+    Given a list of N tensors *MPS* [U1, U2, ..., UN] , representing a Matrix Product State, perform the contraction in the Examples,
     leading to a single tensor of order N, representing a dense state.
     
     The index ordering convention is from left-to-right. 
@@ -212,6 +215,11 @@ def to_dense(MPS):
     -------
     dense_state : ndarray of shape ([d] * N)
         N-order tensor representing the dense state.
+
+    Examples
+    --------
+    >>> U1 - U2 - ... - UN
+    >>>  |    |          |
     """
     
     #TODO add assertions
@@ -250,23 +258,22 @@ def to_approx_MPS(dense_state, N, d=2, chi=2):
     MPS: List of *N* tensors containing the left-canonical MPS
         List of *N* tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
         all the others are of order 3. The shapes are not fixed, but they are (a_i, d, a_{i+1}), with a_i, a_{i+1} <= chi 
-        for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries.
-
-         U1 - U2 - U3 - ... - UN 
-         |    |    |          |
-
+        for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries. We can see the representation
+        in the first example.
         The index ordering convention is from left-to-right. 
         For instance, the "left" index of U2 is the first, the "bottom" one is the second, and the "right" one is the third.
     
     Examples
     --------
-    For d=2, N=7 and chi=5, the tensor network is as follows:
-     U1 -2- U2 -4- U3 -5- U4 -5- U5 -4- U6 -2- U7
-     |      |      |      |      |      |      |
-    where -x- denotes the bounds' dimension (all the "bottom-facing" indices are of dimension d=2). Thus, the shapes
-    of the returned tensors are as follows:
-       U1       U2          U3         U4        U5         U6        U7
-    [(2, 2), (2, 2, 4), (4, 2, 5), (5, 2, 5), (5, 2, 4), (4, 2, 2), (2, 2)]
+    >>> U1 - U2 - U3 - ... - UN 
+    >>> |    |    |          |
+    # For d=2, N=7 and chi=5, the tensor network is as follows:
+    >>> U1 -2- U2 -4- U3 -5- U4 -5- U5 -4- U6 -2- U7
+    >>> |      |      |      |      |      |      |
+    # where -x- denotes the bounds' dimension (all the "bottom-facing" indices are of dimension d=2). Thus, the shapes
+    # of the returned tensors are as follows:
+    >>>    U1       U2          U3         U4        U5         U6        U7
+    >>> [(2, 2), (2, 2, 4), (4, 2, 5), (5, 2, 5), (5, 2, 4), (4, 2, 2), (2, 2)]
     """
     
     assert N > 0, "Number of sites must be > 0"
@@ -310,8 +317,8 @@ def get_figsize(wf=0.5, hf=(5.**0.5-1.0)/2.0, ):
                              using \showthe\columnwidth , optional
     Returns
     -------
-    [fig_width,fig_height]: list of float
-        fig_size that should be given to matplotlib
+    fig_size: list of float
+        fig_size [width, height] that should be given to matplotlib
     """
     columnwidth = 510.0 #! The width of the Latex paper should be put here [OK]
     

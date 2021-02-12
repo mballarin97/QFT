@@ -200,11 +200,7 @@
 <span class="c1">#Helper functions</span>
 <div class="viewcode-block" id="right_contract"><a class="viewcode-back" href="../helper.html#helper.right_contract">[docs]</a><span class="k">def</span> <span class="nf">right_contract</span><span class="p">(</span><span class="n">states</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Given the N right-most *states* of a MPS, computes their contraction with themselves, as follows:</span>
-<span class="sd">    </span>
-<span class="sd">    - o  -  o  -  o  -  o</span>
-<span class="sd">      |     |     |     |</span>
-<span class="sd">    - o.H - o.H - o.H - o.H</span>
+<span class="sd">    Given the N right-most *states* of a MPS, computes their contraction with themselves, as in the Example</span>
 <span class="sd">    </span>
 <span class="sd">     Parameters</span>
 <span class="sd">    ----------</span>
@@ -215,6 +211,12 @@
 <span class="sd">    -------</span>
 <span class="sd">    Matrix: order 2 tensor</span>
 <span class="sd">        Returns a order 2 tensor.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt;  - o  -  o  -  o  -  o </span>
+<span class="sd">    &gt;&gt;&gt;    |     |     |     | </span>
+<span class="sd">    &gt;&gt;&gt;  o.H - o.H - o.H - o.H </span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1">#Add np.conjugate (when we will use complex numbers)</span>
     
@@ -243,11 +245,7 @@
 
 <div class="viewcode-block" id="left_contract"><a class="viewcode-back" href="../helper.html#helper.left_contract">[docs]</a><span class="k">def</span> <span class="nf">left_contract</span><span class="p">(</span><span class="n">states</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Given the N left-most *states* of a MPS, computes their contraction with themselves, as follows:</span>
-<span class="sd">    </span>
-<span class="sd">    o  -  o  -  o  -  o   -</span>
-<span class="sd">    |     |     |     |</span>
-<span class="sd">    o.H - o.H - o.H - o.H -</span>
+<span class="sd">    Given the N left-most *states* of a MPS, computes their contraction with themselves, as in the Example.</span>
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -258,6 +256,12 @@
 <span class="sd">    -------</span>
 <span class="sd">    Matrix: order 2 tensor</span>
 <span class="sd">        Returns a order 2 tensor.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; o  -  o  -  o  -  o   -</span>
+<span class="sd">    &gt;&gt;&gt; |     |     |     |</span>
+<span class="sd">    &gt;&gt;&gt; o.H - o.H - o.H - o.H -</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="c1">#Convention is the following (idk if it&#39;s the most efficient...)</span>
@@ -315,13 +319,14 @@
 <span class="sd">    -------</span>
 <span class="sd">    MPS : list of *N* tensors</span>
 <span class="sd">        List of *N* tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while</span>
-<span class="sd">        all the others are of order 3.</span>
-
-<span class="sd">         U1 - U2 - U3 - ... - UN </span>
-<span class="sd">         |    |    |          |</span>
-
+<span class="sd">        all the others are of order 3. We can see the sketch in the Example.</span>
 <span class="sd">        The index ordering convention is from left-to-right. </span>
 <span class="sd">        For instance, the &quot;left&quot; index of U2 is the first, the &quot;bottom&quot; one is the second, and the &quot;right&quot; one is the third.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; U1 - U2 - U3 - ... - UN </span>
+<span class="sd">    &gt;&gt;&gt; |    |    |          |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">assert</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Number of sites must be &gt; 0&quot;</span>
@@ -350,9 +355,7 @@
 
 <div class="viewcode-block" id="to_dense"><a class="viewcode-back" href="../helper.html#helper.to_dense">[docs]</a><span class="k">def</span> <span class="nf">to_dense</span><span class="p">(</span><span class="n">MPS</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Given a list of N tensors *MPS* [U1, U2, ..., UN] , representing a Matrix Product State, perform the following contraction:</span>
-<span class="sd">     U1 - U2 - ... - UN</span>
-<span class="sd">      |    |          |</span>
+<span class="sd">    Given a list of N tensors *MPS* [U1, U2, ..., UN] , representing a Matrix Product State, perform the contraction in the Examples,</span>
 <span class="sd">    leading to a single tensor of order N, representing a dense state.</span>
 <span class="sd">    </span>
 <span class="sd">    The index ordering convention is from left-to-right. </span>
@@ -368,6 +371,11 @@
 <span class="sd">    -------</span>
 <span class="sd">    dense_state : ndarray of shape ([d] * N)</span>
 <span class="sd">        N-order tensor representing the dense state.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; U1 - U2 - ... - UN</span>
+<span class="sd">    &gt;&gt;&gt;  |    |          |</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="c1">#TODO add assertions</span>
@@ -403,25 +411,25 @@
 <span class="sd">    </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    List of *N* tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while</span>
-<span class="sd">    all the others are of order 3. The shapes are not fixed, but they are (a_i, d, a_{i+1}), with a_i, a_{i+1} &lt;= chi </span>
-<span class="sd">    for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries.</span>
-<span class="sd">    </span>
-<span class="sd">     U1 - U2 - U3 - ... - UN </span>
-<span class="sd">     |    |    |          |</span>
-<span class="sd">     </span>
-<span class="sd">    The index ordering convention is from left-to-right. </span>
-<span class="sd">    For instance, the &quot;left&quot; index of U2 is the first, the &quot;bottom&quot; one is the second, and the &quot;right&quot; one is the third.</span>
+<span class="sd">    MPS: List of *N* tensors containing the left-canonical MPS</span>
+<span class="sd">        List of *N* tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while</span>
+<span class="sd">        all the others are of order 3. The shapes are not fixed, but they are (a_i, d, a_{i+1}), with a_i, a_{i+1} &lt;= chi </span>
+<span class="sd">        for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries. We can see the representation</span>
+<span class="sd">        in the first example.</span>
+<span class="sd">        The index ordering convention is from left-to-right. </span>
+<span class="sd">        For instance, the &quot;left&quot; index of U2 is the first, the &quot;bottom&quot; one is the second, and the &quot;right&quot; one is the third.</span>
 <span class="sd">    </span>
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    For d=2, N=7 and chi=5, the tensor network is as follows:</span>
-<span class="sd">     U1 -2- U2 -4- U3 -5- U4 -5- U5 -4- U6 -2- U7</span>
-<span class="sd">     |      |      |      |      |      |      |</span>
-<span class="sd">    where -x- denotes the bounds&#39; dimension (all the &quot;bottom-facing&quot; indices are of dimension d=2). Thus, the shapes</span>
-<span class="sd">    of the returned tensors are as follows:</span>
-<span class="sd">       U1       U2          U3         U4        U5         U6        U7</span>
-<span class="sd">    [(2, 2), (2, 2, 4), (4, 2, 5), (5, 2, 5), (5, 2, 4), (4, 2, 2), (2, 2)]</span>
+<span class="sd">    &gt;&gt;&gt; U1 - U2 - U3 - ... - UN </span>
+<span class="sd">    &gt;&gt;&gt; |    |    |          |</span>
+<span class="sd">    # For d=2, N=7 and chi=5, the tensor network is as follows:</span>
+<span class="sd">    &gt;&gt;&gt; U1 -2- U2 -4- U3 -5- U4 -5- U5 -4- U6 -2- U7</span>
+<span class="sd">    &gt;&gt;&gt; |      |      |      |      |      |      |</span>
+<span class="sd">    # where -x- denotes the bounds&#39; dimension (all the &quot;bottom-facing&quot; indices are of dimension d=2). Thus, the shapes</span>
+<span class="sd">    # of the returned tensors are as follows:</span>
+<span class="sd">    &gt;&gt;&gt;    U1       U2          U3         U4        U5         U6        U7</span>
+<span class="sd">    &gt;&gt;&gt; [(2, 2), (2, 2, 4), (4, 2, 5), (5, 2, 5), (5, 2, 4), (4, 2, 2), (2, 2)]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">assert</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Number of sites must be &gt; 0&quot;</span>
@@ -465,8 +473,8 @@
 <span class="sd">                             using \showthe\columnwidth , optional</span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    [fig_width,fig_height]: list of float</span>
-<span class="sd">        fig_size that should be given to matplotlib</span>
+<span class="sd">    fig_size: list of float</span>
+<span class="sd">        fig_size [width, height] that should be given to matplotlib</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">columnwidth</span> <span class="o">=</span> <span class="mf">510.0</span> <span class="c1">#! The width of the Latex paper should be put here [OK]</span>
     

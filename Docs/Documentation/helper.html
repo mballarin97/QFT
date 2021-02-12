@@ -193,7 +193,7 @@
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>[fig_width,fig_height]</strong> -- fig_size that should be given to matplotlib</p>
+<dd class="field-even"><p><strong>fig_size</strong> -- fig_size [width, height] that should be given to matplotlib</p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>list of float</p>
@@ -204,10 +204,7 @@
 <dl class="py function">
 <dt id="helper.left_contract">
 <code class="sig-prename descclassname">helper.</code><code class="sig-name descname">left_contract</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">states</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper.html#left_contract"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#helper.left_contract" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given the N left-most <em>states</em> of a MPS, computes their contraction with themselves, as follows:</p>
-<p>o  -  o  -  o  -  o   -
-|     |     |     |
-o.H - o.H - o.H - o.H -</p>
+<dd><p>Given the N left-most <em>states</em> of a MPS, computes their contraction with themselves, as in the Example.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>states</strong> (<em>list of tensors</em>) -- N left-most <em>states</em> of a MPS</p>
@@ -219,6 +216,12 @@ o.H - o.H - o.H - o.H -</p>
 <dd class="field-odd"><p>order 2 tensor</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">o</span>  <span class="o">-</span>  <span class="n">o</span>  <span class="o">-</span>  <span class="n">o</span>  <span class="o">-</span>  <span class="n">o</span>   <span class="o">-</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -286,12 +289,7 @@ in which the 0-th qubit is the rightmost.</p>
 <dl class="py function">
 <dt id="helper.right_contract">
 <code class="sig-prename descclassname">helper.</code><code class="sig-name descname">right_contract</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">states</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper.html#right_contract"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#helper.right_contract" title="Permalink to this definition">¶</a></dt>
-<dd><p>Given the N right-most <em>states</em> of a MPS, computes their contraction with themselves, as follows:</p>
-<ul class="simple">
-<li><p>o  -  o  -  o  -  o
-|     |     |     |</p></li>
-<li><p>o.H - o.H - o.H - o.H</p></li>
-</ul>
+<dd><p>Given the N right-most <em>states</em> of a MPS, computes their contraction with themselves, as in the Example</p>
 <blockquote>
 <div><p>Parameters</p>
 </div></blockquote>
@@ -307,6 +305,12 @@ in which the 0-th qubit is the rightmost.</p>
 <dd class="field-even"><p>order 2 tensor</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span> <span class="o">-</span> <span class="n">o</span>  <span class="o">-</span>  <span class="n">o</span>  <span class="o">-</span>  <span class="n">o</span>  <span class="o">-</span>  <span class="n">o</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -325,44 +329,36 @@ of the state in the computational basis.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>List of *N</em> tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while*</p></li>
-<li><p><em>all the others are of order 3. The shapes are not fixed, but they are (a_i, d, a_{i+1}), with a_i, a_{i+1} &lt;= chi</em></p></li>
-<li><p><em>for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries.</em> -- U1 - U2 - U3 - ... - UN
-|    |    |          |</p></li>
-<li><p><em>The index ordering convention is from left-to-right.</em></p></li>
-<li><p><em>For instance, the &quot;left&quot; index of U2 is the first, the &quot;bottom&quot; one is the second, and the &quot;right&quot; one is the third.</em></p></li>
-</ul>
-</p>
+<dd class="field-even"><p><strong>MPS</strong> -- List of <em>N</em> tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
+all the others are of order 3. The shapes are not fixed, but they are (a_i, d, a_{i+1}), with a_i, a_{i+1} &lt;= chi
+for the order 3 tensors, and (d, a_1) or (a_{N-1}, d) for the order 2 tensors at the boundaries. We can see the representation
+in the first example.
+The index ordering convention is from left-to-right.
+For instance, the &quot;left&quot; index of U2 is the first, the &quot;bottom&quot; one is the second, and the &quot;right&quot; one is the third.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List of <em>N</em> tensors containing the left-canonical MPS</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
-<dl class="simple">
-<dt>For d=2, N=7 and chi=5, the tensor network is as follows:</dt><dd><p>U1 -2- U2 -4- U3 -5- U4 -5- U5 -4- U6 -2- U7
-|      |      |      |      |      |      |</p>
-</dd>
-</dl>
-<p>where -x- denotes the bounds' dimension (all the &quot;bottom-facing&quot; indices are of dimension d=2). Thus, the shapes
-of the returned tensors are as follows:</p>
-<blockquote>
-<div><p>U1       U2          U3         U4        U5         U6        U7</p>
-</div></blockquote>
-<p>[(2, 2), (2, 2, 4), (4, 2, 5), (5, 2, 5), (5, 2, 4), (4, 2, 2), (2, 2)]</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">U1</span> <span class="o">-</span> <span class="n">U2</span> <span class="o">-</span> <span class="n">U3</span> <span class="o">-</span> <span class="o">...</span> <span class="o">-</span> <span class="n">UN</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="o">|</span>    <span class="o">|</span>    <span class="o">|</span>          <span class="o">|</span>
+<span class="go"># For d=2, N=7 and chi=5, the tensor network is as follows:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">U1</span> <span class="o">-</span><span class="mi">2</span><span class="o">-</span> <span class="n">U2</span> <span class="o">-</span><span class="mi">4</span><span class="o">-</span> <span class="n">U3</span> <span class="o">-</span><span class="mi">5</span><span class="o">-</span> <span class="n">U4</span> <span class="o">-</span><span class="mi">5</span><span class="o">-</span> <span class="n">U5</span> <span class="o">-</span><span class="mi">4</span><span class="o">-</span> <span class="n">U6</span> <span class="o">-</span><span class="mi">2</span><span class="o">-</span> <span class="n">U7</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="o">|</span>      <span class="o">|</span>      <span class="o">|</span>      <span class="o">|</span>      <span class="o">|</span>      <span class="o">|</span>      <span class="o">|</span>
+<span class="go"># where -x- denotes the bounds&#39; dimension (all the &quot;bottom-facing&quot; indices are of dimension d=2). Thus, the shapes</span>
+<span class="go"># of the returned tensors are as follows:</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="n">U1</span>       <span class="n">U2</span>          <span class="n">U3</span>         <span class="n">U4</span>        <span class="n">U5</span>         <span class="n">U6</span>        <span class="n">U7</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">[(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
 <dt id="helper.to_dense">
 <code class="sig-prename descclassname">helper.</code><code class="sig-name descname">to_dense</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">MPS</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper.html#to_dense"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#helper.to_dense" title="Permalink to this definition">¶</a></dt>
-<dd><dl>
-<dt>Given a list of N tensors <em>MPS</em> [U1, U2, ..., UN] , representing a Matrix Product State, perform the following contraction:</dt><dd><dl>
-<dt>U1 - U2 - ... - UN</dt><dd><div class="line-block">
-<div class="line">|          |</div>
-</div>
-</dd>
-</dl>
-</dd>
-</dl>
-<p>leading to a single tensor of order N, representing a dense state.</p>
+<dd><p>Given a list of N tensors <em>MPS</em> [U1, U2, ..., UN] , representing a Matrix Product State, perform the contraction in the Examples,
+leading to a single tensor of order N, representing a dense state.</p>
 <p>The index ordering convention is from left-to-right.
 For instance, the &quot;left&quot; index of U2 is the first, the &quot;bottom&quot; one is the second, and the &quot;right&quot; one is the third.</p>
 <dl class="field-list simple">
@@ -377,6 +373,11 @@ The last dimension of MPS[i] should be the same of the first dimension of MPS[i+
 <dd class="field-odd"><p>ndarray of shape ([d] * N)</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">U1</span> <span class="o">-</span> <span class="n">U2</span> <span class="o">-</span> <span class="o">...</span> <span class="o">-</span> <span class="n">UN</span>
+<span class="gp">&gt;&gt;&gt; </span> <span class="o">|</span>    <span class="o">|</span>          <span class="o">|</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -394,20 +395,20 @@ of the state in the computational basis.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p><p><strong>MPS</strong> -- List of <em>N</em> tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
-all the others are of order 3.</p>
-<blockquote>
-<div><p>U1 - U2 - U3 - ... - UN
-|    |    |          |</p>
-</div></blockquote>
-<p>The index ordering convention is from left-to-right.
+<dd class="field-even"><p><strong>MPS</strong> -- List of <em>N</em> tensors containing the left-canonical MPS. The first and last tensors are of order 2 (matrices), while
+all the others are of order 3. We can see the sketch in the Example.
+The index ordering convention is from left-to-right.
 For instance, the &quot;left&quot; index of U2 is the first, the &quot;bottom&quot; one is the second, and the &quot;right&quot; one is the third.</p>
-</p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>list of <em>N</em> tensors</p>
 </dd>
 </dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">U1</span> <span class="o">-</span> <span class="n">U2</span> <span class="o">-</span> <span class="n">U3</span> <span class="o">-</span> <span class="o">...</span> <span class="o">-</span> <span class="n">UN</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="o">|</span>    <span class="o">|</span>    <span class="o">|</span>          <span class="o">|</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </div>
