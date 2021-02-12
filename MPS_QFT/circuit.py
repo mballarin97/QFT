@@ -11,7 +11,21 @@ from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubi
 #--- QFT - MANUAL ---
 def qft_circuit_swap_full(state, N, verbosity=False):
     """
-    Computes the QFT of a MPS @state with @N qubits.
+    Computes the QFT of a MPS *state* with *N* qubits.
+    
+    Parameters
+    ----------
+    state: list of ndarray
+        list of tensors of the MPS
+    N: int
+        number of qubits in *state*
+    verbosity: bool, optional
+        Default to False. If True prints applied gates
+        
+    Returns
+    -------
+    state: list of ndarray
+        MPS where we have applied the QFT
     """
     
     H = np.array(quimb.hadamard())
@@ -27,7 +41,23 @@ def qft_circuit_swap_full(state, N, verbosity=False):
 
 def qft_circuit_swap_approx(state, N, verbosity=False, chi=2):
     """
-    Computes the QFT of a MPS @state with @N qubits.
+    Computes the QFT of a MPS *state* with *N* qubits and a bond dimension *chi*.
+    
+    Parameters
+    ----------
+    state: list of ndarray
+        list of tensors of the MPS
+    N: int
+        number of qubits in *state*
+    verbosity: bool, optional
+        Default to False. If True prints applied gates
+    chi: int, optional
+        Bond dimension
+        
+    Returns
+    -------
+    state: list of ndarray
+        MPS where we have applied the QFT
     """
     
     H = np.array(quimb.hadamard())
@@ -47,14 +77,19 @@ def qft_circuit_swap_approx(state, N, verbosity=False, chi=2):
 #---QFT - QISKIT---
 def qft_circuit_qiskit(circuit, n):
     """
-    Apply the QFT to a qiskit quantum circuit @circuit in a recursive way
+    Apply the QFT to a qiskit quantum circuit *circuit* in a recursive way
     
-        Parameters
-        ----------
-            circuit : quantum circuit
-            n       : int
-                number of qubits in @circuit
+    Parameters
+    ----------
+        circuit : quantum circuit
+            quantum circuit where we want to apply the QFT
+        n       : int
+            number of qubits in *circuit*
     
+    Returns
+    -------
+        None: None
+            Acts in place
     """
     if n == 0:
         return circuit
@@ -71,6 +106,20 @@ def qft_circuit_qiskit(circuit, n):
 #---MPS-QISKIT INTERFACE---
 class circ_data():
     """ Class to contain the metadata of a qiskit quantum circuit
+    
+        Attributes
+        ----------
+        data: list
+            data of a quantum circuit
+        gates: list of string
+            names of the gate applied in the correct order
+        gates_params: list of lists
+            gate parameters. if no parameter is present it returns an empty list []
+        indeces: list of tuples of ints
+            indeces to which the gates are applyed
+        n_qub: int
+            number of qubits in the circuit
+            
 
     """
     def __init__(self, circ):
@@ -96,26 +145,28 @@ class circ_data():
         return [ y.index for y in x ]
 
 def MPS_circ(qc, gates = None, init_state = None, chi=None, verbosity=False):
-    """ Function to transform a qiskit circuit @qc to a quimb MPS circuit, using the gates @gates
+    """ Function to transform a qiskit circuit *qc* to a quimb MPS circuit, using the gates *gates*
         
         Parameters
         ----------
             qc         : QuantumCircuit
                 Qiskit quantum circuit to apply to the MPS
-            gates      : dictionary or None
+            gates      : dictionary or None, optional
                 dictionary containing the gate used in the circuit in the format qiskit_gate_name: quimb_gate
                 If None a standard set is used
-            init_state : String, None or quimb.tensor.tensor_1d.MatrixProductState
+            init_state : String, None or quimb.tensor.tensor_1d.MatrixProductState, optional
                 If String containing the state in computational basis, i.e. '000' or '0011'
-                If None starts from empty state '0'*num_qubits
+                If None starts from empty state '0'x(num_qubits)
                 If MPS in quimb format the initial state is the MPS
-            chi        : int
+            chi        : int, optional
                 maximum bond dimension. If None it is automatically chosen.
+            verbosity  : bool, optional
+                if True prints when the state is initialized. Default to false.
                 
         Returns
         -------
             MPS        : quimb.tensor.tensor_1d.MatrixProductState
-                quimb MPS where we have applied the quantum circuit @qc starting from @init_state
+                quimb MPS where we have applied the quantum circuit *qc* starting from *init_state*
     """
     data = circ_data(qc)
     
@@ -149,3 +200,23 @@ def MPS_circ(qc, gates = None, init_state = None, chi=None, verbosity=False):
                 MPS.gate_( gates[ gate_name ](*params), qubits, tags=gate_name, max_bond=chi, contract='swap+split') 
 
     return MPS
+
+
+def GHZ_qiskit(circ):
+    """
+    Generates a GHZ state in the quantum circuit *circ* composed by n qubits. Acts in place.
+    
+    Parameters
+    ----------
+    circ: Quantum Circuit
+        The quantum circuit in the state '00...0' where to build the GHZ
+        
+    Returns
+    -------
+    None: None
+        Acts in place.
+    """
+    n = circ.num_qubits
+    circ.h(0)
+    for i in range(1, n):
+        circ.cx( 0, i)

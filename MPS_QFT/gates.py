@@ -44,7 +44,23 @@ def cphase_swap_quimb(phase):
 
 class GATES():
     """
-        Class to contain the more used gates in quimb format
+        Class to contain the various gates in quimb format
+        
+        Attributes
+        ----------
+        H: matrix shape(2, 2)
+            Hadamard gate
+        NOT: matrix shape(2, 2)
+            Not gate
+        CNOT: matrix shape(4, 4)
+            controlled not gate
+        SWAP: matrix shape(4, 4)
+            swap gate
+        CPHASE(phi): function
+            returns the controlled phase matrix with phase *phi*
+        gate_dict: dictionary
+            dictionary of the format qiskit_gate_name : quimb_gate
+        
     """
     def __init__(self):
         """
@@ -73,7 +89,7 @@ class GATES():
 #Controlled phase + swap gate
 def cphase_swap_qiskit(circuit, control, target, phase):
     """
-        Apply to a quantum circuit @circuit the cphase and swap gate. Acts in place.
+        Apply to a quantum circuit *circuit* the cphase and swap gate. Acts in place.
         
         Parameters
         ----------
@@ -88,7 +104,8 @@ def cphase_swap_qiskit(circuit, control, target, phase):
         
         Returns
         -------
-        None
+        None: None
+            Acts in place
     """
     circuit.cp(phase, control, target)
     circuit.swap(control, target)
