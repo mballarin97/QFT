@@ -9,7 +9,114 @@ from copy import deepcopy
 from helper import right_contract, left_contract
 from helper import to_full_MPS, to_dense, to_approx_MPS
 
+
+# +
+def left_compress(left, right):
+    """
+    Perform a change of gauge in the bond between the tensors @left and @right, making @left a (semi)-unitary tensor.
+    """
+
+    left_dim = left.shape[:-1]
+    left = left.reshape(np.prod(left_dim), -1)
+    
+    q, r = LA.qr(left) #QR decompose the left tensor. 
+    
+    left = q.reshape(*left_dim, -1) #Set left to q (and reshape back)
+    
+    right_dim = right.shape[1:]
+    right = right.reshape(-1, np.prod(right_dim))
+    right = (r @ right).reshape(-1, *right_dim) #Absorb R into right.
+    
+    return (left, right)
+
+def right_compress(left, right):
+    """
+    Perform a change of gauge in the bond between the tensors @left and @right, making @right a (semi)-unitary tensor.
+    """
+    
+    right_dim = right.shape[1:]
+
+    right = right.reshape(-1, np.prod(right_dim)).T 
+    #We want (left) - (right) => (left) - R - Q =  
+    #So we need R before Q. That is why we transpose: (right).T = Q R => (right) = R.T Q.T (and rename R.T => R and Q.T => Q)
+
+    q, r = LA.qr(right)
+    q = q.T
+    r = r.T
+    
+    right = q.reshape(-1, *right_dim) #set (right) to Q (and reshape back)
+    
+    left_dim = left.shape[:-1]
+    left = left.reshape(np.prod(left_dim), -1)
+    left = (left @ r).reshape(*left_dim, -1) #absorb R into (left)
+    
+    return (left, right)
+
+def right_canonize(sites):
+    """Apply a gauge transformation to all bonds between @sites, so that all sites beside the first (leftmost one) are
+       set to (semi)-unitary tensors."""
+    
+    N = len(sites)
+    sites = sites.copy()
+    
+    for i in range(N-1):
+        left  = sites[N-2-i]
+        right = sites[N-1-i]
+        
+        left, right = right_compress(left, right)
+
+        sites[N-1-i] = right
+        sites[N-2-i] = left
+        
+    return sites
+
+def left_canonize(sites):
+    """Apply a gauge transformation to all bonds between @sites, so that all sites beside the last (rightmost one) are
+       set to (semi)-unitary tensors."""
+    
+    N = len(sites)
+    sites = sites.copy()
+    
+    for i in range(N-1):
+        left  = sites[i]
+        right = sites[i+1]
+        
+        left, right = left_compress(left, right)
+
+        sites[i] = left
+        sites[i+1] = right
+        
+    return sites
+
+
 # -
+
+def tensor_trace(MPS):
+    """
+    Contract an MPS with itself. (TensorTrace)
+    """
+    
+    #Use the same schema from left_contract for the first N-1 sites
+    N = len(MPS)-1 
+    bottom_indices = 3 * (np.arange(N)+1)
+    top_indices = bottom_indices - 1
+    middle_indices = bottom_indices - 2
+
+    top_connections = [[1,2]] + [[top_indices[i], middle_indices[i+1], top_indices[i+1]] for i in range(N-1)]
+    bottom_connections = [[1,3]] + [[bottom_indices[i], middle_indices[i+1], bottom_indices[i+1]] for i in range(N-1)]
+
+    #Add the contraction with the N-th site
+    last_index_bot = bottom_connections[-1][-1]
+    last_index_top = top_connections[-1][-1]
+    new_contraction_index = last_index_bot + 1
+    full_bottom = bottom_connections + [[last_index_bot, new_contraction_index]]
+    full_top = top_connections + [[last_index_top, new_contraction_index]]
+
+    MPSconj = [np.conjugate(a) for a in MPS]
+    tensor_trace = ncon(MPS + MPSconj, full_top + full_bottom)
+    
+    return tensor_trace
+
 
 #---MANUAL MPS GATES APPLICATION---
 #2QUBIT without bond dimension
@@ -25,6 +132,12 @@ def apply_two_qubit_gate_full(gate_matrix, pos, state):
     gate = np.array(gate_matrix.reshape(2,2,2,2)) #Reshape gate matrix to 4-order tensor
 
     assert pos < N-1, f"Trying to apply 2-qubit gate to sites ({pos},{pos+1}), but {pos+1} does not exist"
+    
+    #---Set site at @pos to center of orthogonality (mixed canonical form)---#
+    if pos > 0: #left-canonization
+        state = left_canonize(state[:pos]) + state[pos:]
+    if pos < N-1: #right-canonization
+        state = state[:pos] + right_canonize(state[pos:])
 
     left_tens = np.array(state[pos])
     right_tens = np.array(state[pos+1])
@@ -33,7 +146,6 @@ def apply_two_qubit_gate_full(gate_matrix, pos, state):
     #A tensor is at a boundary if it has order 2
     left_is_boundary = len(left_tens.shape) == 2
     right_is_boundary = len(right_tens.shape) == 2
-    
     
     #---Contraction with gate---#
     gate_contraction_list = [[-2,-3,1,3], [-1,1,2], [2,3,-4]]
@@ -44,73 +156,6 @@ def apply_two_qubit_gate_full(gate_matrix, pos, state):
         gate_contraction_list[2].pop(-1) #Remove free index of right_tens
 
     gate_contracted = ncon([gate, left_tens, right_tens], gate_contraction_list)
-
-    
-    #---Set gate_contracted to center of orthogonality---#
-
-    #Compute density matrices of left/right branches
-    if not left_is_boundary:
-        rho_left = left_contract(state[:pos])
-
-        #Then we diagonalize it
-        eigenval, eigenvec = LA.eigh(rho_left)
-
-        #Mask out 0 eigenvalues to avoid dividing by 0
-        mask = eigenval > 0
-        eigenval = eigenval[mask]
-        eigenvec = eigenvec[:, mask]
-
-        sqrt_eigenval = np.sqrt(abs(eigenval))
-        X = eigenvec @ np.diag(sqrt_eigenval) @ np.conjugate(eigenvec.T)
-        Xinv = eigenvec @ np.diag(1./sqrt_eigenval) @ np.conjugate(eigenvec.T)
-
-        #Absorb X and Xinv into the tensors
-        gate_contraction_indices = [1, -2, -3, -4]
-
-        if right_is_boundary:
-            gate_contraction_indices.pop(-1)
-
-        #print(X.shape)
-        gate_contracted = ncon([X, gate_contracted], [[-1,1], gate_contraction_indices])
-
-        left_boundary = state[pos-1]
-        left_connection_indices = [-1, -2, 1]
-
-        if len(left_boundary.shape) == 2: #if this qubit is at the left boundary
-            left_connection_indices = [-1, 1]
-
-        state[pos-1] = ncon([left_boundary, Xinv], [left_connection_indices, [1,-3]])
-
-    if not right_is_boundary:
-        rho_right = right_contract(state[pos+2:])
-
-        #Then we diagonalize it
-        eigenval, eigenvec = LA.eigh(rho_right)
-
-        #Mask out 0 eigenvalues to avoid dividing by 0
-        mask = eigenval > 0
-        eigenval = eigenval[mask]
-        eigenvec = eigenvec[:, mask]
-
-        sqrt_eigenval = np.sqrt(abs(eigenval))
-        X = eigenvec @ np.diag(sqrt_eigenval) @ np.conjugate(eigenvec.T)
-        Xinv = eigenvec @ np.diag(1./sqrt_eigenval) @ np.conjugate(eigenvec.T)
-
-        #Absorb X and Xinv into the tensors
-        gate_contraction_indices = [-1, -2, -3, 1]
-
-        if left_is_boundary:
-            gate_contraction_indices = [-1, -2, 1]
-
-        gate_contracted = ncon([gate_contracted, X], [gate_contraction_indices, [1, -4]])
-
-        right_boundary = state[pos+2]
-        right_connection_indices = [1, -2, -3]
-
-        if len(right_boundary.shape) == 2: #if this qubit is at the left boundary
-            right_connection_indices = [1, -2]
-
-        state[pos+2] = ncon([Xinv, right_boundary], [[-1, 1], right_connection_indices])
     
     #---Split to MPS---#
     #Dimensions for the SVD
@@ -177,7 +222,13 @@ def apply_two_qubit_gate(gate_matrix, pos, state, chi=2):
 
     assert pos < N-1, f"Trying to apply 2-qubit gate to sites ({pos},{pos+1}), but {pos+1} does not exist"
     assert chi >= max_bond_dimension(state), "The initial MPS state cannot have a bond dimension higher than @chi."
-
+    
+    #---Set site at @pos to center of orthogonality (mixed canonical form)---#
+    if pos > 0: #left-canonization
+        state = left_canonize(state[:pos]) + state[pos:]
+    if pos < N-1: #right-canonization
+        state = state[:pos] + right_canonize(state[pos:])
+        
     left_tens = np.array(state[pos])
     right_tens = np.array(state[pos+1])
 
@@ -185,7 +236,6 @@ def apply_two_qubit_gate(gate_matrix, pos, state, chi=2):
     #A tensor is at a boundary if it has order 2
     left_is_boundary = len(left_tens.shape) == 2
     right_is_boundary = len(right_tens.shape) == 2
-    
     
     #---Contraction with gate---#
     gate_contraction_list = [[-2,-3,1,3], [-1,1,2], [2,3,-4]]
@@ -196,72 +246,6 @@ def apply_two_qubit_gate(gate_matrix, pos, state, chi=2):
         gate_contraction_list[2].pop(-1) #Remove free index of right_tens
 
     gate_contracted = ncon([gate, left_tens, right_tens], gate_contraction_list)
-    
-    #---Set gate_contracted to center of orthogonality---#
-
-    #Compute density matrices of left/right branches
-    if not left_is_boundary:
-        rho_left = left_contract(state[:pos])
-
-        #Then we diagonalize it
-        eigenval, eigenvec = LA.eigh(rho_left)
-
-        #Mask out 0 eigenvalues to avoid dividing by 0
-        mask = eigenval > 0
-        eigenval = eigenval[mask]
-        eigenvec = eigenvec[:, mask]
-
-        sqrt_eigenval = np.sqrt(abs(eigenval))
-        X = eigenvec @ np.diag(sqrt_eigenval) @ np.conjugate(eigenvec.T)
-        Xinv = eigenvec @ np.diag(1./sqrt_eigenval) @ np.conjugate(eigenvec.T)
-
-        #Absorb X and Xinv into the tensors
-        gate_contraction_indices = [1, -2, -3, -4]
-
-        if right_is_boundary:
-            gate_contraction_indices.pop(-1)
-
-        #print(X.shape)
-        gate_contracted = ncon([X, gate_contracted], [[-1,1], gate_contraction_indices])
-
-        left_boundary = state[pos-1]
-        left_connection_indices = [-1, -2, 1]
-
-        if len(left_boundary.shape) == 2: #if this qubit is at the left boundary
-            left_connection_indices = [-1, 1]
-
-        state[pos-1] = ncon([left_boundary, Xinv], [left_connection_indices, [1,-3]])
-
-    if not right_is_boundary:
-        rho_right = right_contract(state[pos+2:])
-
-        #Then we diagonalize it
-        eigenval, eigenvec = LA.eigh(rho_right)
-
-        #Mask out 0 eigenvalues to avoid dividing by 0
-        mask = eigenval > 0
-        eigenval = eigenval[mask]
-        eigenvec = eigenvec[:, mask]
-
-        sqrt_eigenval = np.sqrt(abs(eigenval))
-        X = eigenvec @ np.diag(sqrt_eigenval) @ np.conjugate(eigenvec.T)
-        Xinv = eigenvec @ np.diag(1./sqrt_eigenval) @ np.conjugate(eigenvec.T)
-
-        #Absorb X and Xinv into the tensors
-        gate_contraction_indices = [-1, -2, -3, 1]
-
-        if left_is_boundary:
-            gate_contraction_indices = [-1, -2, 1]
-
-        gate_contracted = ncon([gate_contracted, X], [gate_contraction_indices, [1, -4]])
-
-        right_boundary = state[pos+2]
-        right_connection_indices = [1, -2, -3]
-
-        if len(right_boundary.shape) == 2: #if this qubit is at the left boundary
-            right_connection_indices = [1, -2]
-
-        state[pos+2] = ncon([Xinv, right_boundary], [[-1, 1], right_connection_indices])
     
     #---Split to MPS---#
     #Dimensions for the SVD
