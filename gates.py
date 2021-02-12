@@ -42,9 +42,54 @@ def cphase_swap_quimb(phase):
 
 # -
 
+class GATES():
+    """
+        Class to contain the more used gates in quimb format
+    """
+    def __init__(self):
+        """
+            Initialize the various gates from quimb and create a dictionary with the format
+            qiskit_gate_name : quimb_gate
+        """
+        # Controlled NOT
+        self.CNOT = quimb.controlled('not')
+        # Hadamard
+        self.H = quimb.gen.operators.hadamard()
+        # NOT
+        self.NOT = quimb.gen.operators.pauli('x')
+        # SWAP
+        self.SWAP = quimb.gen.operators.swap()
+        # CPHASE
+        self.CPHASE = CPHASE
+        
+        self.gate_dict = {'h': self.H, 
+                         'cx': self.CNOT,
+                         'cp': self.CPHASE,
+                         'swap': self.SWAP,
+                         'x' : self.NOT}
+
+
 #---QISKIT---
 #Controlled phase + swap gate
 def cphase_swap_qiskit(circuit, control, target, phase):
+    """
+        Apply to a quantum circuit @circuit the cphase and swap gate. Acts in place.
+        
+        Parameters
+        ----------
+        circuit: Quantum Circuit
+            Qiskit quantum circuit 
+        control: int
+            Index of the control qubit for the controlled phase
+        target: int 
+            Index of the target qubit for the controlled phase
+        phase: double
+            Phase to apply in the controlled phase in radiants
+        
+        Returns
+        -------
+        None
+    """
     circuit.cp(phase, control, target)
     circuit.swap(control, target)
 

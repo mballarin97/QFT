@@ -268,3 +268,23 @@ def to_approx_MPS(dense_state, N, d=2, chi=2):
     MPS.append(state_tensor)
         
     return MPS
+
+
+# -
+
+def get_figsize(wf=0.5, hf=(5.**0.5-1.0)/2.0, ):
+    """Parameters:
+      - wf [float]:  width fraction in columnwidth units
+      - hf [float]:  height fraction in columnwidth units.
+                     Set by default to golden ratio.
+      - columnwidth [float]: width of the column in latex. Get this from LaTeX 
+                             using \showthe\columnwidth
+    Returns:  [fig_width,fig_height]: that should be given to matplotlib
+    """
+    columnwidth = 510.0 #! The width of the Latex paper should be put here [OK]
+    
+    fig_width_pt = columnwidth*wf 
+    inches_per_pt = 1.0/72.27               # Convert pt to inch
+    fig_width = fig_width_pt*inches_per_pt  # width in inches
+    fig_height = fig_width*hf      # height in inches
+    return [fig_width, fig_height]
