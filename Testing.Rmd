@@ -286,7 +286,7 @@ ax[1].fill_between(N_manual, times_manual_full[:,0]-times_manual_full[:,1],
 
 #ax[1].set_ylabel('Time [s]')
 ax[1].set_xlabel('Number of qubits')
-ax[1].set_title('Time scaling fot QFT - $\chi=\\left \\lfloor \\frac{N}{2} \\right \\rfloor$')
+ax[1].set_title('Time scaling fot QFT - $\chi=2^{\\left \\lfloor \\sfrac{N}{2} \\right \\rfloor}$')
 ax[1].legend(loc='best')
 ax[1].set_yscale('log')
 

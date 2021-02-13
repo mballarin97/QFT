@@ -1947,7 +1947,7 @@
 \definecolor{textcolor}{rgb}{0.000000,0.000000,0.000000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=5.205309in,y=1.827877in,,base]{\color{textcolor}\rmfamily\fontsize{11.000000}{13.200000}\selectfont Time scaling for QFT - \(\displaystyle \chi=\left \lfloor N/2 \right \rfloor\)}%
+\pgftext[x=5.205309in,y=1.827877in,,base]{\color{textcolor}\rmfamily\fontsize{11.000000}{13.200000}\selectfont Time scaling for QFT - \(\displaystyle \chi=2^{\left \lfloor \sfrac{N}{2} \right \rfloor}\)}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \pgfsetbuttcap%
