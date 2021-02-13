@@ -1,0 +1,5 @@
+Checks
+======
+
+.. automodule:: checks
+   :members:
