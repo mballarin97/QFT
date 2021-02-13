@@ -84,10 +84,12 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../circuit.html">CIRCUIT</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../manual.html">MANUAL MPS IMPLEMENTATION</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../circuit.html">Circuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../manual.html">Manual MPS implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../helper.html">Helper functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gates.html">Quantum gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checks.html">Checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tests.html">Testing</a></li>
 </ul>
 
             
@@ -266,6 +268,23 @@
     <span class="n">circuit</span><span class="o">.</span><span class="n">cp</span><span class="p">(</span><span class="n">phase</span><span class="p">,</span> <span class="n">control</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
     <span class="n">circuit</span><span class="o">.</span><span class="n">swap</span><span class="p">(</span><span class="n">control</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span></div>
 
+
+<span class="c1"># ------- CIRQ -------</span>
+<div class="viewcode-block" id="cphase_and_swap_cirq"><a class="viewcode-back" href="../gates.html#gates.cphase_and_swap_cirq">[docs]</a><span class="k">def</span> <span class="nf">cphase_and_swap_cirq</span><span class="p">(</span><span class="n">ctrl</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">phase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Combine the CPHASE gate with the SWAP operation, used for QFT algorithm.</span>
+<span class="sd">    Input</span>
+<span class="sd">        crtl: cirq.devices.line_qubit.LineQubit</span>
+<span class="sd">            control qubit</span>
+<span class="sd">        target: cirq.devices.line_qubit.LineQubit</span>
+<span class="sd">            target qubit</span>
+<span class="sd">        phase: double</span>
+<span class="sd">            phase to apply in radiants</span>
+<span class="sd">    Return</span>
+<span class="sd">        cirq gate</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">yield</span> <span class="n">cirq</span><span class="o">.</span><span class="n">CZ</span><span class="p">(</span><span class="n">ctrl</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="o">**</span> <span class="n">phase</span>
+    <span class="k">yield</span> <span class="n">cirq</span><span class="o">.</span><span class="n">SWAP</span><span class="p">(</span><span class="n">ctrl</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

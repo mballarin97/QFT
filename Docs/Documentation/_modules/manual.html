@@ -84,10 +84,12 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../circuit.html">CIRCUIT</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../manual.html">MANUAL MPS IMPLEMENTATION</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../circuit.html">Circuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../manual.html">Manual MPS implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../helper.html">Helper functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gates.html">Quantum gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checks.html">Checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tests.html">Testing</a></li>
 </ul>
 
             
@@ -165,14 +167,194 @@
 <span class="kn">from</span> <span class="nn">helper</span> <span class="kn">import</span> <span class="n">right_contract</span><span class="p">,</span> <span class="n">left_contract</span>
 <span class="kn">from</span> <span class="nn">helper</span> <span class="kn">import</span> <span class="n">to_full_MPS</span><span class="p">,</span> <span class="n">to_dense</span><span class="p">,</span> <span class="n">to_approx_MPS</span>
 
+
+<span class="c1"># +</span>
+<div class="viewcode-block" id="left_compress"><a class="viewcode-back" href="../manual.html#manual.left_compress">[docs]</a><span class="k">def</span> <span class="nf">left_compress</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform a change of gauge in the bond between the tensors *left* and *right*, making *left* a (semi)-unitary tensor.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    left: list of N ndarrays</span>
+<span class="sd">        left tensor</span>
+<span class="sd">    right: list of N ndarrays</span>
+<span class="sd">        right tensor</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    (left, right): tuple of tensors</span>
+<span class="sd">        left is now a semi-unitary tensor</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">left_dim</span> <span class="o">=</span> <span class="n">left</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="n">left</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">left_dim</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="n">q</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">LA</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">left</span><span class="p">)</span> <span class="c1">#QR decompose the left tensor. </span>
+    
+    <span class="n">left</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">left_dim</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#Set left to q (and reshape back)</span>
+    
+    <span class="n">right_dim</span> <span class="o">=</span> <span class="n">right</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="n">right</span> <span class="o">=</span> <span class="n">right</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">right_dim</span><span class="p">))</span>
+    <span class="n">right</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span> <span class="o">@</span> <span class="n">right</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">right_dim</span><span class="p">)</span> <span class="c1">#Absorb R into right.</span>
+    
+    <span class="k">return</span> <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="right_compress"><a class="viewcode-back" href="../manual.html#manual.right_compress">[docs]</a><span class="k">def</span> <span class="nf">right_compress</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform a change of gauge in the bond between the tensors *left* and *right*, making *right* a (semi)-unitary tensor.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    left: list of N ndarrays</span>
+<span class="sd">        left tensor</span>
+<span class="sd">    right: list of N ndarrays</span>
+<span class="sd">        right tensor</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    (left, right): tuple of tensors</span>
+<span class="sd">        right is now a semi-unitary tensor</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">right_dim</span> <span class="o">=</span> <span class="n">right</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+    <span class="n">right</span> <span class="o">=</span> <span class="n">right</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">right_dim</span><span class="p">))</span><span class="o">.</span><span class="n">T</span> 
+    <span class="c1">#We want (left) - (right) =&gt; (left) - R - Q =  </span>
+    <span class="c1">#So we need R before Q. That is why we transpose: (right).T = Q R =&gt; (right) = R.T Q.T (and rename R.T =&gt; R and Q.T =&gt; Q)</span>
+
+    <span class="n">q</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">LA</span><span class="o">.</span><span class="n">qr</span><span class="p">(</span><span class="n">right</span><span class="p">)</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">T</span>
+    
+    <span class="n">right</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">right_dim</span><span class="p">)</span> <span class="c1">#set (right) to Q (and reshape back)</span>
+    
+    <span class="n">left_dim</span> <span class="o">=</span> <span class="n">left</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="n">left</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">left_dim</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="p">(</span><span class="n">left</span> <span class="o">@</span> <span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">left_dim</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#absorb R into (left)</span>
+    
+    <span class="k">return</span> <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="right_canonize"><a class="viewcode-back" href="../manual.html#manual.right_canonize">[docs]</a><span class="k">def</span> <span class="nf">right_canonize</span><span class="p">(</span><span class="n">sites</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply a gauge transformation to all bonds between *sites*, so that all sites beside the first (leftmost one) are</span>
+<span class="sd">        set to (semi)-unitary tensors.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sites: list of N ndarrays</span>
+<span class="sd">            Tensor to which we want to apply the right-canonization</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sites: list of N ndarrays</span>
+<span class="sd">            Right-canonized tensor</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span>
+    <span class="n">sites</span> <span class="o">=</span> <span class="n">sites</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">left</span>  <span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">2</span><span class="o">-</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">i</span><span class="p">]</span>
+        
+        <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">right_compress</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
+
+        <span class="n">sites</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">right</span>
+        <span class="n">sites</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">2</span><span class="o">-</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">left</span>
+        
+    <span class="k">return</span> <span class="n">sites</span></div>
+
+<div class="viewcode-block" id="left_canonize"><a class="viewcode-back" href="../manual.html#manual.left_canonize">[docs]</a><span class="k">def</span> <span class="nf">left_canonize</span><span class="p">(</span><span class="n">sites</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply a gauge transformation to all bonds between *sites*, so that all sites beside the last (rightmost one) are</span>
+<span class="sd">        set to (semi)-unitary tensors.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sites: list of N ndarrays</span>
+<span class="sd">            Tensor to which we want to apply the right-canonization</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sites: list of N ndarrays</span>
+<span class="sd">            Left-canonized tensor</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sites</span><span class="p">)</span>
+    <span class="n">sites</span> <span class="o">=</span> <span class="n">sites</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">left</span>  <span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="n">sites</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">left_compress</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
+
+        <span class="n">sites</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">left</span>
+        <span class="n">sites</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">right</span>
+        
+    <span class="k">return</span> <span class="n">sites</span></div>
+
+
 <span class="c1"># -</span>
+
+<div class="viewcode-block" id="tensor_trace"><a class="viewcode-back" href="../manual.html#manual.tensor_trace">[docs]</a><span class="k">def</span> <span class="nf">tensor_trace</span><span class="p">(</span><span class="n">MPS</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Contract an MPS with itself. (TensorTrace)</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    MPS: list of N ndarrays</span>
+<span class="sd">        Matrix product state to contract</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tensor_trace: double</span>
+<span class="sd">        Contraction of MPS with itself</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1">#Use the same schema from left_contract for the first N-1 sites</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">MPS</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span> 
+    <span class="n">bottom_indices</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">N</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">top_indices</span> <span class="o">=</span> <span class="n">bottom_indices</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">middle_indices</span> <span class="o">=</span> <span class="n">bottom_indices</span> <span class="o">-</span> <span class="mi">2</span>
+
+    <span class="n">top_connections</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]]</span> <span class="o">+</span> <span class="p">[[</span><span class="n">top_indices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">middle_indices</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">top_indices</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="n">bottom_connections</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">]]</span> <span class="o">+</span> <span class="p">[[</span><span class="n">bottom_indices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">middle_indices</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">bottom_indices</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+
+    <span class="c1">#Add the contraction with the N-th site</span>
+    <span class="n">last_index_bot</span> <span class="o">=</span> <span class="n">bottom_connections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">last_index_top</span> <span class="o">=</span> <span class="n">top_connections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">new_contraction_index</span> <span class="o">=</span> <span class="n">last_index_bot</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">full_bottom</span> <span class="o">=</span> <span class="n">bottom_connections</span> <span class="o">+</span> <span class="p">[[</span><span class="n">last_index_bot</span><span class="p">,</span> <span class="n">new_contraction_index</span><span class="p">]]</span>
+    <span class="n">full_top</span> <span class="o">=</span> <span class="n">top_connections</span> <span class="o">+</span> <span class="p">[[</span><span class="n">last_index_top</span><span class="p">,</span> <span class="n">new_contraction_index</span><span class="p">]]</span>
+
+    <span class="n">MPSconj</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">MPS</span><span class="p">]</span>
+    <span class="n">tensor_trace</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">(</span><span class="n">MPS</span> <span class="o">+</span> <span class="n">MPSconj</span><span class="p">,</span> <span class="n">full_top</span> <span class="o">+</span> <span class="n">full_bottom</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">tensor_trace</span></div>
+
 
 <span class="c1">#---MANUAL MPS GATES APPLICATION---</span>
 <span class="c1">#2QUBIT without bond dimension</span>
 <div class="viewcode-block" id="apply_two_qubit_gate_full"><a class="viewcode-back" href="../manual.html#manual.apply_two_qubit_gate_full">[docs]</a><span class="k">def</span> <span class="nf">apply_two_qubit_gate_full</span><span class="p">(</span><span class="n">gate_matrix</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Apply a 2-qubit gate specified by the unitary matrix @gate_matrix to qubits at sites (@pos, @pos+1)</span>
-<span class="sd">    for a MPS @state.</span>
+<span class="sd">    Apply a 2-qubit gate specified by the unitary matrix *gate_matrix* to qubits at sites (*pos*, *pos*+1)</span>
+<span class="sd">    for a MPS *state*.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gate_matrix: numpy array shape (4, 4)</span>
+<span class="sd">        Matrix representation of the quantum gate</span>
+<span class="sd">    pos: int</span>
+<span class="sd">        Position of the first qubit where to apply *gate_matrix*. It will be applied to (*pos*, *pos*+1).</span>
+<span class="sd">    state: list of N ndarrays</span>
+<span class="sd">        Matrix product state to which we want to apply the gate</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    state: list of N ndarrays</span>
+<span class="sd">        Matrix product state where we have applied the gate</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
@@ -181,6 +363,12 @@
     <span class="n">gate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">gate_matrix</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span> <span class="c1">#Reshape gate matrix to 4-order tensor</span>
 
     <span class="k">assert</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Trying to apply 2-qubit gate to sites (</span><span class="si">{</span><span class="n">pos</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">), but </span><span class="si">{</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2"> does not exist&quot;</span>
+    
+    <span class="c1">#---Set site at @pos to center of orthogonality (mixed canonical form)---#</span>
+    <span class="k">if</span> <span class="n">pos</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1">#left-canonization</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">left_canonize</span><span class="p">(</span><span class="n">state</span><span class="p">[:</span><span class="n">pos</span><span class="p">])</span> <span class="o">+</span> <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="p">:]</span>
+    <span class="k">if</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="c1">#right-canonization</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">state</span><span class="p">[:</span><span class="n">pos</span><span class="p">]</span> <span class="o">+</span> <span class="n">right_canonize</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span>
 
     <span class="n">left_tens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="p">])</span>
     <span class="n">right_tens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
@@ -189,7 +377,6 @@
     <span class="c1">#A tensor is at a boundary if it has order 2</span>
     <span class="n">left_is_boundary</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">left_tens</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
     <span class="n">right_is_boundary</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">right_tens</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
-    
     
     <span class="c1">#---Contraction with gate---#</span>
     <span class="n">gate_contraction_list</span> <span class="o">=</span> <span class="p">[[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="o">-</span><span class="mi">4</span><span class="p">]]</span>
@@ -200,73 +387,6 @@
         <span class="n">gate_contraction_list</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#Remove free index of right_tens</span>
 
     <span class="n">gate_contracted</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">gate</span><span class="p">,</span> <span class="n">left_tens</span><span class="p">,</span> <span class="n">right_tens</span><span class="p">],</span> <span class="n">gate_contraction_list</span><span class="p">)</span>
-
-    
-    <span class="c1">#---Set gate_contracted to center of orthogonality---#</span>
-
-    <span class="c1">#Compute density matrices of left/right branches</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">left_is_boundary</span><span class="p">:</span>
-        <span class="n">rho_left</span> <span class="o">=</span> <span class="n">left_contract</span><span class="p">(</span><span class="n">state</span><span class="p">[:</span><span class="n">pos</span><span class="p">])</span>
-
-        <span class="c1">#Then we diagonalize it</span>
-        <span class="n">eigenval</span><span class="p">,</span> <span class="n">eigenvec</span> <span class="o">=</span> <span class="n">LA</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">rho_left</span><span class="p">)</span>
-
-        <span class="c1">#Mask out 0 eigenvalues to avoid dividing by 0</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">eigenval</span> <span class="o">&gt;</span> <span class="mi">0</span>
-        <span class="n">eigenval</span> <span class="o">=</span> <span class="n">eigenval</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
-        <span class="n">eigenvec</span> <span class="o">=</span> <span class="n">eigenvec</span><span class="p">[:,</span> <span class="n">mask</span><span class="p">]</span>
-
-        <span class="n">sqrt_eigenval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">eigenval</span><span class="p">))</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="n">eigenvec</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">sqrt_eigenval</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">eigenvec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-        <span class="n">Xinv</span> <span class="o">=</span> <span class="n">eigenvec</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">sqrt_eigenval</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">eigenvec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-
-        <span class="c1">#Absorb X and Xinv into the tensors</span>
-        <span class="n">gate_contraction_indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">right_is_boundary</span><span class="p">:</span>
-            <span class="n">gate_contraction_indices</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-
-        <span class="c1">#print(X.shape)</span>
-        <span class="n">gate_contracted</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">X</span><span class="p">,</span> <span class="n">gate_contracted</span><span class="p">],</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">gate_contraction_indices</span><span class="p">])</span>
-
-        <span class="n">left_boundary</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">left_connection_indices</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">left_boundary</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1">#if this qubit is at the left boundary</span>
-            <span class="n">left_connection_indices</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-
-        <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">left_boundary</span><span class="p">,</span> <span class="n">Xinv</span><span class="p">],</span> <span class="p">[</span><span class="n">left_connection_indices</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">]])</span>
-
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">right_is_boundary</span><span class="p">:</span>
-        <span class="n">rho_right</span> <span class="o">=</span> <span class="n">right_contract</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">2</span><span class="p">:])</span>
-
-        <span class="c1">#Then we diagonalize it</span>
-        <span class="n">eigenval</span><span class="p">,</span> <span class="n">eigenvec</span> <span class="o">=</span> <span class="n">LA</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">rho_right</span><span class="p">)</span>
-
-        <span class="c1">#Mask out 0 eigenvalues to avoid dividing by 0</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">eigenval</span> <span class="o">&gt;</span> <span class="mi">0</span>
-        <span class="n">eigenval</span> <span class="o">=</span> <span class="n">eigenval</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
-        <span class="n">eigenvec</span> <span class="o">=</span> <span class="n">eigenvec</span><span class="p">[:,</span> <span class="n">mask</span><span class="p">]</span>
-
-        <span class="n">sqrt_eigenval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">eigenval</span><span class="p">))</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="n">eigenvec</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">sqrt_eigenval</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">eigenvec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-        <span class="n">Xinv</span> <span class="o">=</span> <span class="n">eigenvec</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">sqrt_eigenval</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">eigenvec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-
-        <span class="c1">#Absorb X and Xinv into the tensors</span>
-        <span class="n">gate_contraction_indices</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">left_is_boundary</span><span class="p">:</span>
-            <span class="n">gate_contraction_indices</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-
-        <span class="n">gate_contracted</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">gate_contracted</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="p">[</span><span class="n">gate_contraction_indices</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">]])</span>
-
-        <span class="n">right_boundary</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span>
-        <span class="n">right_connection_indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">right_boundary</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1">#if this qubit is at the left boundary</span>
-            <span class="n">right_connection_indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">]</span>
-
-        <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">Xinv</span><span class="p">,</span> <span class="n">right_boundary</span><span class="p">],</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">right_connection_indices</span><span class="p">])</span>
     
     <span class="c1">#---Split to MPS---#</span>
     <span class="c1">#Dimensions for the SVD</span>
@@ -302,6 +422,27 @@
 <div class="viewcode-block" id="max_bond_dimension"><a class="viewcode-back" href="../manual.html#manual.max_bond_dimension">[docs]</a><span class="k">def</span> <span class="nf">max_bond_dimension</span><span class="p">(</span><span class="n">mps</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return the maximum bond dimension of a mps state.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mps: list of N ndarrays</span>
+<span class="sd">        Matrix product state</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    max_bond: int</span>
+<span class="sd">        Maximum bond dimension of the MPS</span>
+<span class="sd">        </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from MPS_QFT.helper import to_full_MPS</span>
+<span class="sd">    &gt;&gt;&gt; GHZ = np.zeros(2**N)</span>
+<span class="sd">    &gt;&gt;&gt; GHZ[0] = 1</span>
+<span class="sd">    &gt;&gt;&gt; GHZ[-1] = 1</span>
+<span class="sd">    # We created a GHZ, which max bond dim is 2. We now translate it in MPS</span>
+<span class="sd">    &gt;&gt;&gt; GHZ_MPS = to_full_MPS(GHZ, N)</span>
+<span class="sd">    &gt;&gt;&gt; max_bond_dimension(GHZ_MPS)</span>
+<span class="sd">    2</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mps</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
@@ -321,9 +462,25 @@
 <span class="c1">#2 qubit gate with bond dimension</span>
 <div class="viewcode-block" id="apply_two_qubit_gate"><a class="viewcode-back" href="../manual.html#manual.apply_two_qubit_gate">[docs]</a><span class="k">def</span> <span class="nf">apply_two_qubit_gate</span><span class="p">(</span><span class="n">gate_matrix</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">chi</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Apply a 2-qubit gate specified by the unitary matrix @gate_matrix to qubits at sites (@pos, @pos+1)</span>
-<span class="sd">    for a MPS @state and contract the resulting tensor back with maximum bond dimension @chi.</span>
-<span class="sd">    @chi cannot be less than the maximum bond dimension of the initial mps @state.</span>
+<span class="sd">    Apply a 2-qubit gate specified by the unitary matrix *gate_matrix* to qubits at sites (*pos*, *pos*+1)</span>
+<span class="sd">    for a MPS *state* and contract the resulting tensor back with maximum bond dimension *chi*.</span>
+<span class="sd">    *chi* cannot be less than the maximum bond dimension of the initial mps *state*.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gate_matrix: numpy array shape (4, 4)</span>
+<span class="sd">        Matrix representation of the quantum gate</span>
+<span class="sd">    pos: int</span>
+<span class="sd">        Position of the first qubit where to apply *gate_matrix*. It will be applied to (*pos*, *pos*+1).</span>
+<span class="sd">    state: list of N ndarrays</span>
+<span class="sd">        Matrix product state to which we want to apply the gate</span>
+<span class="sd">    chi: int, optional</span>
+<span class="sd">        Bond dimension of the state after the qubit application. Default to 2</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    state: MPS</span>
+<span class="sd">        Matrix product state where we have applied the gate</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
@@ -333,7 +490,13 @@
 
     <span class="k">assert</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Trying to apply 2-qubit gate to sites (</span><span class="si">{</span><span class="n">pos</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">), but </span><span class="si">{</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2"> does not exist&quot;</span>
     <span class="k">assert</span> <span class="n">chi</span> <span class="o">&gt;=</span> <span class="n">max_bond_dimension</span><span class="p">(</span><span class="n">state</span><span class="p">),</span> <span class="s2">&quot;The initial MPS state cannot have a bond dimension higher than @chi.&quot;</span>
-
+    
+    <span class="c1">#---Set site at @pos to center of orthogonality (mixed canonical form)---#</span>
+    <span class="k">if</span> <span class="n">pos</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1">#left-canonization</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">left_canonize</span><span class="p">(</span><span class="n">state</span><span class="p">[:</span><span class="n">pos</span><span class="p">])</span> <span class="o">+</span> <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="p">:]</span>
+    <span class="k">if</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="c1">#right-canonization</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">state</span><span class="p">[:</span><span class="n">pos</span><span class="p">]</span> <span class="o">+</span> <span class="n">right_canonize</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span>
+        
     <span class="n">left_tens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="p">])</span>
     <span class="n">right_tens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
 
@@ -341,7 +504,6 @@
     <span class="c1">#A tensor is at a boundary if it has order 2</span>
     <span class="n">left_is_boundary</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">left_tens</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
     <span class="n">right_is_boundary</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">right_tens</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
-    
     
     <span class="c1">#---Contraction with gate---#</span>
     <span class="n">gate_contraction_list</span> <span class="o">=</span> <span class="p">[[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="o">-</span><span class="mi">4</span><span class="p">]]</span>
@@ -352,72 +514,6 @@
         <span class="n">gate_contraction_list</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#Remove free index of right_tens</span>
 
     <span class="n">gate_contracted</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">gate</span><span class="p">,</span> <span class="n">left_tens</span><span class="p">,</span> <span class="n">right_tens</span><span class="p">],</span> <span class="n">gate_contraction_list</span><span class="p">)</span>
-    
-    <span class="c1">#---Set gate_contracted to center of orthogonality---#</span>
-
-    <span class="c1">#Compute density matrices of left/right branches</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">left_is_boundary</span><span class="p">:</span>
-        <span class="n">rho_left</span> <span class="o">=</span> <span class="n">left_contract</span><span class="p">(</span><span class="n">state</span><span class="p">[:</span><span class="n">pos</span><span class="p">])</span>
-
-        <span class="c1">#Then we diagonalize it</span>
-        <span class="n">eigenval</span><span class="p">,</span> <span class="n">eigenvec</span> <span class="o">=</span> <span class="n">LA</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">rho_left</span><span class="p">)</span>
-
-        <span class="c1">#Mask out 0 eigenvalues to avoid dividing by 0</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">eigenval</span> <span class="o">&gt;</span> <span class="mi">0</span>
-        <span class="n">eigenval</span> <span class="o">=</span> <span class="n">eigenval</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
-        <span class="n">eigenvec</span> <span class="o">=</span> <span class="n">eigenvec</span><span class="p">[:,</span> <span class="n">mask</span><span class="p">]</span>
-
-        <span class="n">sqrt_eigenval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">eigenval</span><span class="p">))</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="n">eigenvec</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">sqrt_eigenval</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">eigenvec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-        <span class="n">Xinv</span> <span class="o">=</span> <span class="n">eigenvec</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">sqrt_eigenval</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">eigenvec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-
-        <span class="c1">#Absorb X and Xinv into the tensors</span>
-        <span class="n">gate_contraction_indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">right_is_boundary</span><span class="p">:</span>
-            <span class="n">gate_contraction_indices</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-
-        <span class="c1">#print(X.shape)</span>
-        <span class="n">gate_contracted</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">X</span><span class="p">,</span> <span class="n">gate_contracted</span><span class="p">],</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">gate_contraction_indices</span><span class="p">])</span>
-
-        <span class="n">left_boundary</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">left_connection_indices</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">left_boundary</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1">#if this qubit is at the left boundary</span>
-            <span class="n">left_connection_indices</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-
-        <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">left_boundary</span><span class="p">,</span> <span class="n">Xinv</span><span class="p">],</span> <span class="p">[</span><span class="n">left_connection_indices</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">3</span><span class="p">]])</span>
-
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">right_is_boundary</span><span class="p">:</span>
-        <span class="n">rho_right</span> <span class="o">=</span> <span class="n">right_contract</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">2</span><span class="p">:])</span>
-
-        <span class="c1">#Then we diagonalize it</span>
-        <span class="n">eigenval</span><span class="p">,</span> <span class="n">eigenvec</span> <span class="o">=</span> <span class="n">LA</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">rho_right</span><span class="p">)</span>
-
-        <span class="c1">#Mask out 0 eigenvalues to avoid dividing by 0</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="n">eigenval</span> <span class="o">&gt;</span> <span class="mi">0</span>
-        <span class="n">eigenval</span> <span class="o">=</span> <span class="n">eigenval</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
-        <span class="n">eigenvec</span> <span class="o">=</span> <span class="n">eigenvec</span><span class="p">[:,</span> <span class="n">mask</span><span class="p">]</span>
-
-        <span class="n">sqrt_eigenval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">eigenval</span><span class="p">))</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="n">eigenvec</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">sqrt_eigenval</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">eigenvec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-        <span class="n">Xinv</span> <span class="o">=</span> <span class="n">eigenvec</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">sqrt_eigenval</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">eigenvec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
-
-        <span class="c1">#Absorb X and Xinv into the tensors</span>
-        <span class="n">gate_contraction_indices</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">left_is_boundary</span><span class="p">:</span>
-            <span class="n">gate_contraction_indices</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
-
-        <span class="n">gate_contracted</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">gate_contracted</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="p">[</span><span class="n">gate_contraction_indices</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">]])</span>
-
-        <span class="n">right_boundary</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span>
-        <span class="n">right_connection_indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">right_boundary</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1">#if this qubit is at the left boundary</span>
-            <span class="n">right_connection_indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">]</span>
-
-        <span class="n">state</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">ncon</span><span class="p">([</span><span class="n">Xinv</span><span class="p">,</span> <span class="n">right_boundary</span><span class="p">],</span> <span class="p">[[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">right_connection_indices</span><span class="p">])</span>
     
     <span class="c1">#---Split to MPS---#</span>
     <span class="c1">#Dimensions for the SVD</span>
@@ -456,7 +552,21 @@
 <span class="c1">#1 qubit gate</span>
 <div class="viewcode-block" id="apply_one_qubit_gate"><a class="viewcode-back" href="../manual.html#manual.apply_one_qubit_gate">[docs]</a><span class="k">def</span> <span class="nf">apply_one_qubit_gate</span><span class="p">(</span><span class="n">gate</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Applies a one qubit gate @gate to the site @pos of the MPS @state.</span>
+<span class="sd">    Applies a one qubit gate *gate* to the site *pos* of the MPS *state*.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gate_matrix: numpy array shape (2, 2)</span>
+<span class="sd">        Matrix representation of the quantum gate</span>
+<span class="sd">    pos: int</span>
+<span class="sd">        Position of the qubit where to apply *gate_matrix*. </span>
+<span class="sd">    state: list of N ndarrays</span>
+<span class="sd">        Matrix product state to which we want to apply the gate</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    state: list of N ndarrays</span>
+<span class="sd">        Matrix product state where we have applied the gate</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
     <span class="n">state</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>

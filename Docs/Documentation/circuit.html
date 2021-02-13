@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>CIRCUIT &mdash; MPS_QFT 12/02/2021 documentation</title>
+  <title>Circuit &mdash; MPS_QFT 12/02/2021 documentation</title>
   
 
   
@@ -38,7 +38,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="MANUAL MPS IMPLEMENTATION" href="manual.html" />
+    <link rel="next" title="Manual MPS implementation" href="manual.html" />
     <link rel="prev" title="Welcome to MPS_QFT&#39;s documentation!" href="index.html" /> 
 </head>
 
@@ -86,10 +86,12 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">CIRCUIT</a></li>
-<li class="toctree-l1"><a class="reference internal" href="manual.html">MANUAL MPS IMPLEMENTATION</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Circuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manual.html">Manual MPS implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="helper.html">Helper functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gates.html">Quantum gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="checks.html">Checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Testing</a></li>
 </ul>
 
             
@@ -138,14 +140,14 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>CIRCUIT</li>
+      <li>Circuit</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
           
             
-              <a href="https://github.com/mballarin97/QFT/blob/master\.circuit.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/mballarin97/QFT/blob/master\Docs\Documentationcircuit.rst" class="fa fa-github"> Edit on GitHub</a>
             
           
         
@@ -159,9 +161,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="module-circuit">
-<span id="circuit"></span><h1>CIRCUIT<a class="headerlink" href="#module-circuit" title="Permalink to this headline">¶</a></h1>
-<dl class="py function">
+  <div class="section" id="circuit">
+<h1>Circuit<a class="headerlink" href="#circuit" title="Permalink to this headline">¶</a></h1>
+<p>Here we present all the functions linked to the circuits</p>
+<span class="target" id="module-circuit"></span><dl class="py function">
 <dt id="circuit.GHZ_qiskit">
 <code class="sig-prename descclassname">circuit.</code><code class="sig-name descname">GHZ_qiskit</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">circ</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/circuit.html#GHZ_qiskit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#circuit.GHZ_qiskit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a GHZ state in the quantum circuit <em>circ</em> composed by n qubits. Acts in place.</p>
@@ -286,6 +289,28 @@ If MPS in quimb format the initial state is the MPS</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt id="circuit.qft_circuit_quimb">
+<code class="sig-prename descclassname">circuit.</code><code class="sig-name descname">qft_circuit_quimb</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mps</span></em>, <em class="sig-param"><span class="n">n</span></em>, <em class="sig-param"><span class="n">chi</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/circuit.html#qft_circuit_quimb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#circuit.qft_circuit_quimb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply the QFT to the matrix product state <em>mps</em> with a bond dimension of <em>chi</em>
+in a recursive way</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mps</strong> (<em>quimb.tensor.tensor_1d.MatrixProductState</em>) -- Matrix product state to which we want to apply the QFT</p></li>
+<li><p><strong>n</strong> (<em>int</em>) -- number of qubits in <em>mps</em></p></li>
+<li><p><strong>chi</strong> (<em>int</em><em>, </em><em>optional</em>) -- Bond dimension of the MPS. Default to 2</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>mps</strong> -- Matrix product state to which we have applied the QFT</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>quimb.tensor.tensor_1d.MatrixProductState</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt id="circuit.qft_circuit_swap_approx">
 <code class="sig-prename descclassname">circuit.</code><code class="sig-name descname">qft_circuit_swap_approx</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">state</span></em>, <em class="sig-param"><span class="n">N</span></em>, <em class="sig-param"><span class="n">verbosity</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">chi</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/circuit.html#qft_circuit_swap_approx"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#circuit.qft_circuit_swap_approx" title="Permalink to this definition">¶</a></dt>
 <dd><p>Computes the QFT of a MPS <em>state</em> with <em>N</em> qubits and a bond dimension <em>chi</em>.</p>
@@ -303,6 +328,30 @@ If MPS in quimb format the initial state is the MPS</p></li>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>list of ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="circuit.qft_circuit_swap_cirq">
+<code class="sig-prename descclassname">circuit.</code><code class="sig-name descname">qft_circuit_swap_cirq</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">qubits</span></em>, <em class="sig-param"><span class="n">circuit</span><span class="o">=</span><span class="default_value">[]</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/circuit.html#qft_circuit_swap_cirq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#circuit.qft_circuit_swap_cirq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build a circuit implementing the QFT algorithm on the given <em>qubits</em>.
+The order of <em>qubits</em> is preserved by SWAP operations.
+Implemented using only local operations, i.e. gates acting on neighbouring qubits.
+Adapted from: <a class="reference external" href="https://github.com/quantumlib/Cirq/blob/master/examples/quantum_fourier_transform.py">https://github.com/quantumlib/Cirq/blob/master/examples/quantum_fourier_transform.py</a> and extended to
+n generic qubits through recursion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>qubits</strong> (<em>cirq.LineQubit</em>) -- qubits</p></li>
+<li><p><strong>circuit</strong> (<em>list</em>) -- list of directives to create the quantum circuit</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>circuit</strong> -- quantum circuit where we have applied the QFT</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>cirq.Circuit</p>
 </dd>
 </dl>
 </dd></dl>
@@ -336,7 +385,7 @@ If MPS in quimb format the initial state is the MPS</p></li>
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="manual.html" class="btn btn-neutral float-right" title="MANUAL MPS IMPLEMENTATION" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="manual.html" class="btn btn-neutral float-right" title="Manual MPS implementation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
         <a href="index.html" class="btn btn-neutral float-left" title="Welcome to MPS_QFT&#39;s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 

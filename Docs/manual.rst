@@ -1,4 +1,4 @@
-MANUAL MPS IMPLEMENTATION
+Manual MPS implementation
 =========================
 
 .. automodule:: manual

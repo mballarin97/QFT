@@ -84,10 +84,12 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../circuit.html">CIRCUIT</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../manual.html">MANUAL MPS IMPLEMENTATION</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../circuit.html">Circuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../manual.html">Manual MPS implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../helper.html">Helper functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gates.html">Quantum gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checks.html">Checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tests.html">Testing</a></li>
 </ul>
 
             
@@ -160,7 +162,7 @@
 <span class="kn">from</span> <span class="nn">qiskit</span> <span class="kn">import</span> <span class="n">QuantumCircuit</span><span class="p">,</span> <span class="n">execute</span><span class="p">,</span> <span class="n">Aer</span>
 <span class="kn">from</span> <span class="nn">qiskit.circuit</span> <span class="kn">import</span> <span class="n">library</span> <span class="k">as</span> <span class="n">lb</span>
 
-<span class="kn">from</span> <span class="nn">gates</span> <span class="kn">import</span> <span class="n">cphase_swap_qiskit</span><span class="p">,</span> <span class="n">cphase_swap_quimb</span><span class="p">,</span> <span class="n">GATES</span>
+<span class="kn">from</span> <span class="nn">gates</span> <span class="kn">import</span> <span class="n">cphase_swap_qiskit</span><span class="p">,</span> <span class="n">cphase_swap_quimb</span><span class="p">,</span> <span class="n">GATES</span><span class="p">,</span> <span class="n">cphase_and_swap_cirq</span>
 <span class="kn">from</span> <span class="nn">manual</span> <span class="kn">import</span> <span class="n">apply_two_qubit_gate_full</span><span class="p">,</span> <span class="n">max_bond_dimension</span><span class="p">,</span> <span class="n">apply_two_qubit_gate</span><span class="p">,</span> <span class="n">apply_one_qubit_gate</span>
 
 <span class="c1"># +</span>
@@ -258,6 +260,74 @@
         <span class="n">cphase_swap_qiskit</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="o">**</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
         
     <span class="k">return</span> <span class="n">qft_circuit_qiskit</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
+<span class="c1"># ---QFT - CIRQ---</span>
+<div class="viewcode-block" id="qft_circuit_swap_cirq"><a class="viewcode-back" href="../circuit.html#circuit.qft_circuit_swap_cirq">[docs]</a><span class="k">def</span> <span class="nf">qft_circuit_swap_cirq</span><span class="p">(</span><span class="n">qubits</span><span class="p">,</span> <span class="n">circuit</span><span class="o">=</span><span class="p">[]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build a circuit implementing the QFT algorithm on the given *qubits*. </span>
+<span class="sd">    The order of *qubits* is preserved by SWAP operations.</span>
+<span class="sd">    Implemented using only local operations, i.e. gates acting on neighbouring qubits.</span>
+<span class="sd">    Adapted from: https://github.com/quantumlib/Cirq/blob/master/examples/quantum_fourier_transform.py and extended to</span>
+<span class="sd">    n generic qubits through recursion.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    qubits: cirq.LineQubit</span>
+<span class="sd">        qubits</span>
+<span class="sd">    circuit: list</span>
+<span class="sd">        list of directives to create the quantum circuit</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    circuit: cirq.Circuit</span>
+<span class="sd">        quantum circuit where we have applied the QFT</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">qubits</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Number of qubits must be &gt; 0&quot;</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">circuit</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cirq</span><span class="o">.</span><span class="n">H</span><span class="p">(</span><span class="n">qubits</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">cirq</span><span class="o">.</span><span class="n">Circuit</span><span class="p">(</span><span class="n">circuit</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="n">cirq</span><span class="o">.</span><span class="n">InsertStrategy</span><span class="o">.</span><span class="n">EARLIEST</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">circuit</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cirq</span><span class="o">.</span><span class="n">H</span><span class="p">(</span><span class="n">qubits</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">circuit</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">cphase_and_swap_cirq</span><span class="p">(</span><span class="n">qubits</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">qubits</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="o">**</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">qft_circuit_swap_cirq</span><span class="p">(</span><span class="n">qubits</span><span class="p">[:</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">circuit</span><span class="p">)</span></div>
+
+
+<span class="c1"># ---QFT - QUIMB---</span>
+<div class="viewcode-block" id="qft_circuit_quimb"><a class="viewcode-back" href="../circuit.html#circuit.qft_circuit_quimb">[docs]</a><span class="k">def</span> <span class="nf">qft_circuit_quimb</span><span class="p">(</span><span class="n">mps</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">chi</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply the QFT to the matrix product state *mps* with a bond dimension of *chi*</span>
+<span class="sd">        in a recursive way</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">            mps : quimb.tensor.tensor_1d.MatrixProductState</span>
+<span class="sd">                Matrix product state to which we want to apply the QFT</span>
+<span class="sd">            n       : int</span>
+<span class="sd">                number of qubits in *mps*</span>
+<span class="sd">            chi : int, optional</span>
+<span class="sd">                Bond dimension of the MPS. Default to 2</span>
+<span class="sd">                </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            mps: quimb.tensor.tensor_1d.MatrixProductState</span>
+<span class="sd">                Matrix product state to which we have applied the QFT</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">H</span> <span class="o">=</span> <span class="n">quimb</span><span class="o">.</span><span class="n">hadamard</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">mps</span>
+    <span class="k">elif</span> <span class="n">n</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">mps</span><span class="o">.</span><span class="n">gate_</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="n">contract</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> 
+        <span class="k">return</span> <span class="n">mps</span>
+    
+    <span class="n">mps</span><span class="o">.</span><span class="n">gate_</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="n">contract</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">mps</span><span class="o">.</span><span class="n">gate_</span><span class="p">(</span><span class="n">cphase_swap_quimb</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mi">2</span><span class="o">**</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)),</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">tags</span><span class="o">=</span><span class="s1">&#39;Cphase_swap&#39;</span><span class="p">,</span> <span class="n">max_bond</span><span class="o">=</span><span class="n">chi</span><span class="p">,</span> <span class="n">contract</span><span class="o">=</span><span class="s1">&#39;swap+split&#39;</span><span class="p">)</span>
+        
+    <span class="k">return</span> <span class="n">qft_circuit_quimb</span><span class="p">(</span><span class="n">mps</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
 
 <span class="c1">#---MPS-QISKIT INTERFACE---</span>
 <div class="viewcode-block" id="circ_data"><a class="viewcode-back" href="../circuit.html#circuit.circ_data">[docs]</a><span class="k">class</span> <span class="nc">circ_data</span><span class="p">():</span>

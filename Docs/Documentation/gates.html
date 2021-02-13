@@ -144,7 +144,7 @@
         
           
             
-              <a href="https://github.com/mballarin97/QFT/blob/master\.gates.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/mballarin97/QFT/blob/master\Docs\Documentationgates.rst" class="fa fa-github"> Edit on GitHub</a>
             
           
         
@@ -250,6 +250,27 @@
 </dl>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt id="gates.cphase_and_swap_cirq">
+<code class="sig-prename descclassname">gates.</code><code class="sig-name descname">cphase_and_swap_cirq</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ctrl</span></em>, <em class="sig-param"><span class="n">target</span></em>, <em class="sig-param"><span class="n">phase</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/gates.html#cphase_and_swap_cirq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gates.cphase_and_swap_cirq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine the CPHASE gate with the SWAP operation, used for QFT algorithm.
+Input</p>
+<blockquote>
+<div><dl class="simple">
+<dt>crtl: cirq.devices.line_qubit.LineQubit</dt><dd><p>control qubit</p>
+</dd>
+<dt>target: cirq.devices.line_qubit.LineQubit</dt><dd><p>target qubit</p>
+</dd>
+<dt>phase: double</dt><dd><p>phase to apply in radiants</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>Return</dt><dd><p>cirq gate</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">

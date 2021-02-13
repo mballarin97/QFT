@@ -1,5 +1,6 @@
-CIRCUIT
+Circuit
 =======
+Here we present all the functions linked to the circuits
 
 .. automodule:: circuit
    :members:

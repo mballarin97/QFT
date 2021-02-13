@@ -1,0 +1,286 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="python" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>test_canonize &mdash; MPS_QFT 12/02/2021 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> MPS_QFT
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../circuit.html">Circuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../manual.html">Manual MPS implementation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../helper.html">Helper functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gates.html">Quantum gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../checks.html">Checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tests.html">Testing</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">MPS_QFT</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>test_canonize</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for test_canonize</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Test for canonizing MPS</span>
+<span class="c1"># Tested functions: manual.left_canonize, manual.right_canonize</span>
+
+<span class="c1">#Allow imports from parent folder</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span> 
+<span class="n">currentdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="n">parentdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">currentdir</span><span class="p">)</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parentdir</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">quimb</span>
+
+<span class="kn">from</span> <span class="nn">manual</span> <span class="kn">import</span> <span class="n">left_canonize</span><span class="p">,</span> <span class="n">right_canonize</span>
+<span class="kn">from</span> <span class="nn">checks</span> <span class="kn">import</span> <span class="n">check_left_canonization</span><span class="p">,</span> <span class="n">check_right_canonization</span>
+<span class="kn">from</span> <span class="nn">test_mps</span> <span class="kn">import</span> <span class="n">new_random_state</span>
+
+<span class="kn">from</span> <span class="nn">helper</span> <span class="kn">import</span> <span class="n">to_full_MPS</span><span class="p">,</span> <span class="n">to_approx_MPS</span>
+
+<span class="c1">#Physical dimension of a site (2 for qubits)</span>
+<span class="n">d</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="c1">#Range of system&#39;s sizes to be tested</span>
+<span class="n">Nmin</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">Nmax</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="n">chi_min</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">chi_max</span> <span class="o">=</span> <span class="mi">10</span>
+
+<div class="viewcode-block" id="test_left_canonize"><a class="viewcode-back" href="../tests.html#test_canonize.test_left_canonize">[docs]</a><span class="k">def</span> <span class="nf">test_left_canonize</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Test if left_canonize works as expected&quot;&quot;&quot;</span>
+    
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nmin</span><span class="p">,</span> <span class="n">Nmax</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">new_random_state</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        
+        <span class="n">rand_mps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">MPS_full</span> <span class="o">=</span> <span class="n">to_full_MPS</span><span class="p">(</span><span class="n">random_state</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="c1">#just for the shapes</span>
+        
+        <span class="k">for</span> <span class="n">shape</span> <span class="ow">in</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">MPS_full</span><span class="p">]:</span> <span class="c1">#Generate an unnormalized mps (since MPS_full would be already in left-canonical form by construction)</span>
+            <span class="n">rand_mps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="o">*</span><span class="n">shape</span><span class="p">))</span> 
+        
+        <span class="n">MPS_leftcanonical</span> <span class="o">=</span> <span class="n">left_canonize</span><span class="p">(</span><span class="n">rand_mps</span><span class="p">)</span>
+        
+        <span class="k">assert</span> <span class="n">check_left_canonization</span><span class="p">(</span><span class="n">MPS_leftcanonical</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="s2">&quot;left_canonize error&quot;</span></div>
+
+<div class="viewcode-block" id="test_right_canonize"><a class="viewcode-back" href="../tests.html#test_canonize.test_right_canonize">[docs]</a><span class="k">def</span> <span class="nf">test_right_canonize</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Test if right_canonize works as expected&quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nmin</span><span class="p">,</span> <span class="n">Nmax</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">new_random_state</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+        <span class="n">MPS_full</span> <span class="o">=</span> <span class="n">to_full_MPS</span><span class="p">(</span><span class="n">random_state</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="c1">#this is in left-canonical form</span>
+        
+        <span class="n">MPS_rightcanonical</span> <span class="o">=</span> <span class="n">right_canonize</span><span class="p">(</span><span class="n">MPS_full</span><span class="p">)</span>
+        
+        <span class="k">assert</span> <span class="n">check_right_canonization</span><span class="p">(</span><span class="n">MPS_rightcanonical</span><span class="p">[</span><span class="mi">1</span><span class="p">:]),</span> <span class="s2">&quot;right_canonize error&quot;</span></div>
+
+<div class="viewcode-block" id="test_mixed_canonize"><a class="viewcode-back" href="../tests.html#test_canonize.test_mixed_canonize">[docs]</a><span class="k">def</span> <span class="nf">test_mixed_canonize</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Test if left_canonize and right_canonize work as expected when used together&quot;&quot;&quot;</span>
+    
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nmin</span><span class="p">,</span> <span class="n">Nmax</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">new_random_state</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">rand_mps</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">MPS_full</span> <span class="o">=</span> <span class="n">to_full_MPS</span><span class="p">(</span><span class="n">random_state</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="c1">#just for the shapes</span>
+        
+        <span class="k">for</span> <span class="n">shape</span> <span class="ow">in</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">MPS_full</span><span class="p">]:</span> <span class="c1">#Generate an unnormalized mps (since MPS_full would be already in left-canonical form by construction)</span>
+            <span class="n">rand_mps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="o">*</span><span class="n">shape</span><span class="p">))</span> 
+            
+        <span class="n">MPS_mixedcanonical</span> <span class="o">=</span> <span class="n">rand_mps</span>
+        <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span> 
+            <span class="c1">#set the site at pos as center of orthogonality</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">MPS_mixedcanonical</span> <span class="o">=</span> <span class="n">left_canonize</span><span class="p">(</span><span class="n">MPS_mixedcanonical</span><span class="p">[:</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">MPS_mixedcanonical</span><span class="p">[</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">MPS_mixedcanonical</span> <span class="o">=</span> <span class="n">MPS_mixedcanonical</span><span class="p">[:</span><span class="n">pos</span><span class="p">]</span> <span class="o">+</span> <span class="n">right_canonize</span><span class="p">(</span><span class="n">MPS_mixedcanonical</span><span class="p">[</span><span class="n">pos</span><span class="p">:])</span>
+
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="n">check_left_canonization</span><span class="p">(</span><span class="n">MPS_mixedcanonical</span><span class="p">[:</span><span class="n">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">]),</span> <span class="s2">&quot;Error in mixed left&quot;</span>
+            <span class="k">if</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="n">check_right_canonization</span><span class="p">(</span><span class="n">MPS_mixedcanonical</span><span class="p">[</span><span class="n">pos</span><span class="p">:]),</span> <span class="s2">&quot;Error in mixed right&quot;</span></div>
+
+    
+
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Marco Ballarin, Francesco Manzali, Beatrice Segalini.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

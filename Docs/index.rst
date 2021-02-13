@@ -14,6 +14,8 @@ Welcome to MPS_QFT's documentation!
    manual
    helper
    gates
+   checks
+   tests
 
 Indices and tables
 ==================

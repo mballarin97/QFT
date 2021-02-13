@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>MANUAL MPS IMPLEMENTATION &mdash; MPS_QFT 12/02/2021 documentation</title>
+  <title>Manual MPS implementation &mdash; MPS_QFT 12/02/2021 documentation</title>
   
 
   
@@ -39,7 +39,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Helper functions" href="helper.html" />
-    <link rel="prev" title="CIRCUIT" href="circuit.html" /> 
+    <link rel="prev" title="Circuit" href="circuit.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -86,10 +86,12 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="circuit.html">CIRCUIT</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">MANUAL MPS IMPLEMENTATION</a></li>
+<li class="toctree-l1"><a class="reference internal" href="circuit.html">Circuit</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Manual MPS implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="helper.html">Helper functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gates.html">Quantum gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="checks.html">Checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Testing</a></li>
 </ul>
 
             
@@ -138,14 +140,14 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>MANUAL MPS IMPLEMENTATION</li>
+      <li>Manual MPS implementation</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
           
             
-              <a href="https://github.com/mballarin97/QFT/blob/master\.manual.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/mballarin97/QFT/blob/master\Docs\Documentationmanual.rst" class="fa fa-github"> Edit on GitHub</a>
             
           
         
@@ -160,32 +162,193 @@
            <div itemprop="articleBody">
             
   <div class="section" id="module-manual">
-<span id="manual-mps-implementation"></span><h1>MANUAL MPS IMPLEMENTATION<a class="headerlink" href="#module-manual" title="Permalink to this headline">¶</a></h1>
+<span id="manual-mps-implementation"></span><h1>Manual MPS implementation<a class="headerlink" href="#module-manual" title="Permalink to this headline">¶</a></h1>
 <dl class="py function">
 <dt id="manual.apply_one_qubit_gate">
 <code class="sig-prename descclassname">manual.</code><code class="sig-name descname">apply_one_qubit_gate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gate</span></em>, <em class="sig-param"><span class="n">pos</span></em>, <em class="sig-param"><span class="n">state</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#apply_one_qubit_gate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.apply_one_qubit_gate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Applies a one qubit gate &#64;gate to the site &#64;pos of the MPS &#64;state.</p>
+<dd><p>Applies a one qubit gate <em>gate</em> to the site <em>pos</em> of the MPS <em>state</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gate_matrix</strong> (<em>numpy array shape</em><em> (</em><em>2</em><em>, </em><em>2</em><em>)</em>) -- Matrix representation of the quantum gate</p></li>
+<li><p><strong>pos</strong> (<em>int</em>) -- Position of the qubit where to apply <em>gate_matrix</em>.</p></li>
+<li><p><strong>state</strong> (<em>list of N ndarrays</em>) -- Matrix product state to which we want to apply the gate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>state</strong> -- Matrix product state where we have applied the gate</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list of N ndarrays</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt id="manual.apply_two_qubit_gate">
 <code class="sig-prename descclassname">manual.</code><code class="sig-name descname">apply_two_qubit_gate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gate_matrix</span></em>, <em class="sig-param"><span class="n">pos</span></em>, <em class="sig-param"><span class="n">state</span></em>, <em class="sig-param"><span class="n">chi</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#apply_two_qubit_gate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.apply_two_qubit_gate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply a 2-qubit gate specified by the unitary matrix &#64;gate_matrix to qubits at sites (&#64;pos, &#64;pos+1)
-for a MPS &#64;state and contract the resulting tensor back with maximum bond dimension &#64;chi.
-&#64;chi cannot be less than the maximum bond dimension of the initial mps &#64;state.</p>
+<dd><p>Apply a 2-qubit gate specified by the unitary matrix <em>gate_matrix</em> to qubits at sites (<em>pos</em>, <em>pos*+1)
+for a MPS *state</em> and contract the resulting tensor back with maximum bond dimension <em>chi</em>.
+<em>chi</em> cannot be less than the maximum bond dimension of the initial mps <em>state</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gate_matrix</strong> (<em>numpy array shape</em><em> (</em><em>4</em><em>, </em><em>4</em><em>)</em>) -- Matrix representation of the quantum gate</p></li>
+<li><p><strong>pos</strong> (<em>int</em>) -- Position of the first qubit where to apply <em>gate_matrix</em>. It will be applied to (<em>pos</em>, <a href="#id1"><span class="problematic" id="id2">*</span></a>pos*+1).</p></li>
+<li><p><strong>state</strong> (<em>list of N ndarrays</em>) -- Matrix product state to which we want to apply the gate</p></li>
+<li><p><strong>chi</strong> (<em>int</em><em>, </em><em>optional</em>) -- Bond dimension of the state after the qubit application. Default to 2</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>state</strong> -- Matrix product state where we have applied the gate</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>MPS</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt id="manual.apply_two_qubit_gate_full">
 <code class="sig-prename descclassname">manual.</code><code class="sig-name descname">apply_two_qubit_gate_full</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gate_matrix</span></em>, <em class="sig-param"><span class="n">pos</span></em>, <em class="sig-param"><span class="n">state</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#apply_two_qubit_gate_full"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.apply_two_qubit_gate_full" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply a 2-qubit gate specified by the unitary matrix &#64;gate_matrix to qubits at sites (&#64;pos, &#64;pos+1)
-for a MPS &#64;state.</p>
+<dd><p>Apply a 2-qubit gate specified by the unitary matrix <em>gate_matrix</em> to qubits at sites (<em>pos</em>, <em>pos*+1)
+for a MPS *state</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gate_matrix</strong> (<em>numpy array shape</em><em> (</em><em>4</em><em>, </em><em>4</em><em>)</em>) -- Matrix representation of the quantum gate</p></li>
+<li><p><strong>pos</strong> (<em>int</em>) -- Position of the first qubit where to apply <em>gate_matrix</em>. It will be applied to (<em>pos</em>, <a href="#id3"><span class="problematic" id="id4">*</span></a>pos*+1).</p></li>
+<li><p><strong>state</strong> (<em>list of N ndarrays</em>) -- Matrix product state to which we want to apply the gate</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>state</strong> -- Matrix product state where we have applied the gate</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list of N ndarrays</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="manual.left_canonize">
+<code class="sig-prename descclassname">manual.</code><code class="sig-name descname">left_canonize</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sites</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#left_canonize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.left_canonize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a gauge transformation to all bonds between <em>sites</em>, so that all sites beside the last (rightmost one) are
+set to (semi)-unitary tensors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sites</strong> (<em>list of N ndarrays</em>) -- Tensor to which we want to apply the right-canonization</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>sites</strong> -- Left-canonized tensor</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list of N ndarrays</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="manual.left_compress">
+<code class="sig-prename descclassname">manual.</code><code class="sig-name descname">left_compress</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">left</span></em>, <em class="sig-param"><span class="n">right</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#left_compress"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.left_compress" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a change of gauge in the bond between the tensors <em>left</em> and <em>right</em>, making <em>left</em> a (semi)-unitary tensor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>left</strong> (<em>list of N ndarrays</em>) -- left tensor</p></li>
+<li><p><strong>right</strong> (<em>list of N ndarrays</em>) -- right tensor</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>(left, right)</strong> -- left is now a semi-unitary tensor</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple of tensors</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt id="manual.max_bond_dimension">
 <code class="sig-prename descclassname">manual.</code><code class="sig-name descname">max_bond_dimension</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mps</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#max_bond_dimension"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.max_bond_dimension" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the maximum bond dimension of a mps state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>mps</strong> (<em>list of N ndarrays</em>) -- Matrix product state</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>max_bond</strong> -- Maximum bond dimension of the MPS</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">MPS_QFT.helper</span> <span class="kn">import</span> <span class="n">to_full_MPS</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">GHZ</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">N</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">GHZ</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">GHZ</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="go"># We created a GHZ, which max bond dim is 2. We now translate it in MPS</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">GHZ_MPS</span> <span class="o">=</span> <span class="n">to_full_MPS</span><span class="p">(</span><span class="n">GHZ</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">max_bond_dimension</span><span class="p">(</span><span class="n">GHZ_MPS</span><span class="p">)</span>
+<span class="go">2</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="manual.right_canonize">
+<code class="sig-prename descclassname">manual.</code><code class="sig-name descname">right_canonize</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sites</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#right_canonize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.right_canonize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a gauge transformation to all bonds between <em>sites</em>, so that all sites beside the first (leftmost one) are
+set to (semi)-unitary tensors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sites</strong> (<em>list of N ndarrays</em>) -- Tensor to which we want to apply the right-canonization</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>sites</strong> -- Right-canonized tensor</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list of N ndarrays</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="manual.right_compress">
+<code class="sig-prename descclassname">manual.</code><code class="sig-name descname">right_compress</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">left</span></em>, <em class="sig-param"><span class="n">right</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#right_compress"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.right_compress" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a change of gauge in the bond between the tensors <em>left</em> and <em>right</em>, making <em>right</em> a (semi)-unitary tensor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>left</strong> (<em>list of N ndarrays</em>) -- left tensor</p></li>
+<li><p><strong>right</strong> (<em>list of N ndarrays</em>) -- right tensor</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>(left, right)</strong> -- right is now a semi-unitary tensor</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple of tensors</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="manual.tensor_trace">
+<code class="sig-prename descclassname">manual.</code><code class="sig-name descname">tensor_trace</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">MPS</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/manual.html#tensor_trace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#manual.tensor_trace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contract an MPS with itself. (TensorTrace)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>MPS</strong> (<em>list of N ndarrays</em>) -- Matrix product state to contract</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>tensor_trace</strong> -- Contraction of MPS with itself</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>double</p>
+</dd>
+</dl>
 </dd></dl>
 
 </div>
@@ -197,7 +360,7 @@ for a MPS &#64;state.</p>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
         <a href="helper.html" class="btn btn-neutral float-right" title="Helper functions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="circuit.html" class="btn btn-neutral float-left" title="CIRCUIT" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="circuit.html" class="btn btn-neutral float-left" title="Circuit" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

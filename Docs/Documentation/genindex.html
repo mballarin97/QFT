@@ -84,10 +84,12 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="circuit.html">CIRCUIT</a></li>
-<li class="toctree-l1"><a class="reference internal" href="manual.html">MANUAL MPS IMPLEMENTATION</a></li>
+<li class="toctree-l1"><a class="reference internal" href="circuit.html">Circuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manual.html">Manual MPS implementation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="helper.html">Helper functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gates.html">Quantum gates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="checks.html">Checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Testing</a></li>
 </ul>
 
             
@@ -143,7 +145,7 @@
         
           
             
-              <a href="https://github.com/mballarin97/QFT/blob/master\.genindex" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/mballarin97/QFT/blob/master\Docs\Documentationgenindex" class="fa fa-github"> Edit on GitHub</a>
             
           
         
@@ -195,6 +197,17 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="checks.html#checks.check_left_canonization">check_left_canonization() (in module checks)</a>
+</li>
+      <li><a href="checks.html#checks.check_right_canonization">check_right_canonization() (in module checks)</a>
+</li>
+      <li>
+    checks
+
+      <ul>
+        <li><a href="checks.html#module-checks">module</a>
+</li>
+      </ul></li>
       <li><a href="circuit.html#circuit.circ_data">circ_data (class in circuit)</a>
 </li>
       <li>
@@ -211,6 +224,8 @@
       <li><a href="gates.html#gates.GATES.CPHASE">CPHASE (gates.GATES attribute)</a>
 </li>
       <li><a href="gates.html#gates.CPHASE">CPHASE() (in module gates)</a>
+</li>
+      <li><a href="gates.html#gates.cphase_and_swap_cirq">cphase_and_swap_cirq() (in module gates)</a>
 </li>
       <li><a href="gates.html#gates.cphase_swap_qiskit">cphase_swap_qiskit() (in module gates)</a>
 </li>
@@ -288,6 +303,12 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="manual.html#manual.left_canonize">left_canonize() (in module manual)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="manual.html#manual.left_compress">left_compress() (in module manual)</a>
+</li>
       <li><a href="helper.html#helper.left_contract">left_contract() (in module helper)</a>
 </li>
   </ul></td>
@@ -309,6 +330,8 @@
     module
 
       <ul>
+        <li><a href="checks.html#module-checks">checks</a>
+</li>
         <li><a href="circuit.html#module-circuit">circuit</a>
 </li>
         <li><a href="gates.html#module-gates">gates</a>
@@ -316,6 +339,12 @@
         <li><a href="helper.html#module-helper">helper</a>
 </li>
         <li><a href="manual.html#module-manual">manual</a>
+</li>
+        <li><a href="tests.html#module-test_canonize">test_canonize</a>
+</li>
+        <li><a href="tests.html#module-test_mps">test_mps</a>
+</li>
+        <li><a href="tests.html#module-test_qft">test_qft</a>
 </li>
       </ul></li>
   </ul></td>
@@ -332,6 +361,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="tests.html#test_mps.new_random_state">new_random_state() (in module test_mps)</a>
+</li>
       <li><a href="gates.html#gates.GATES.NOT">NOT (gates.GATES attribute)</a>
 </li>
   </ul></td>
@@ -350,10 +381,14 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="circuit.html#circuit.qft_circuit_qiskit">qft_circuit_qiskit() (in module circuit)</a>
 </li>
+      <li><a href="circuit.html#circuit.qft_circuit_quimb">qft_circuit_quimb() (in module circuit)</a>
+</li>
       <li><a href="circuit.html#circuit.qft_circuit_swap_approx">qft_circuit_swap_approx() (in module circuit)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="circuit.html#circuit.qft_circuit_swap_cirq">qft_circuit_swap_cirq() (in module circuit)</a>
+</li>
       <li><a href="circuit.html#circuit.qft_circuit_swap_full">qft_circuit_swap_full() (in module circuit)</a>
 </li>
       <li><a href="helper.html#helper.qiskit_get_statevect">qiskit_get_statevect() (in module helper)</a>
@@ -366,8 +401,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="helper.html#helper.reverse_qiskit">reverse_qiskit() (in module helper)</a>
 </li>
+      <li><a href="manual.html#manual.right_canonize">right_canonize() (in module manual)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="manual.html#manual.right_compress">right_compress() (in module manual)</a>
+</li>
       <li><a href="helper.html#helper.right_contract">right_contract() (in module helper)</a>
 </li>
   </ul></td>
@@ -384,10 +423,57 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="helper.html#helper.to_approx_MPS">to_approx_MPS() (in module helper)</a>
+      <li><a href="manual.html#manual.tensor_trace">tensor_trace() (in module manual)</a>
+</li>
+      <li><a href="tests.html#test_mps.test_approx_error">test_approx_error() (in module test_mps)</a>
+</li>
+      <li><a href="tests.html#test_mps.test_bond_dimension">test_bond_dimension() (in module test_mps)</a>
+</li>
+      <li>
+    test_canonize
+
+      <ul>
+        <li><a href="tests.html#module-test_canonize">module</a>
+</li>
+      </ul></li>
+      <li><a href="tests.html#test_qft.test_ghz">test_ghz() (in module test_qft)</a>
+</li>
+      <li><a href="tests.html#test_mps.test_ghz_state">test_ghz_state() (in module test_mps)</a>
+</li>
+      <li><a href="tests.html#test_mps.test_left_canonical">test_left_canonical() (in module test_mps)</a>
+</li>
+      <li><a href="tests.html#test_canonize.test_left_canonize">test_left_canonize() (in module test_canonize)</a>
+</li>
+      <li><a href="tests.html#test_canonize.test_mixed_canonize">test_mixed_canonize() (in module test_canonize)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    test_mps
+
+      <ul>
+        <li><a href="tests.html#module-test_mps">module</a>
+</li>
+      </ul></li>
+      <li>
+    test_qft
+
+      <ul>
+        <li><a href="tests.html#module-test_qft">module</a>
+</li>
+      </ul></li>
+      <li><a href="tests.html#test_mps.test_random_states">test_random_states() (in module test_mps)</a>
+
+      <ul>
+        <li><a href="tests.html#test_qft.test_random_states">(in module test_qft)</a>
+</li>
+      </ul></li>
+      <li><a href="tests.html#test_canonize.test_right_canonize">test_right_canonize() (in module test_canonize)</a>
+</li>
+      <li><a href="tests.html#test_mps.test_with_quimb_mps">test_with_quimb_mps() (in module test_mps)</a>
+</li>
+      <li><a href="helper.html#helper.to_approx_MPS">to_approx_MPS() (in module helper)</a>
+</li>
       <li><a href="helper.html#helper.to_dense">to_dense() (in module helper)</a>
 </li>
       <li><a href="helper.html#helper.to_full_MPS">to_full_MPS() (in module helper)</a>
