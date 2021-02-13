@@ -170,8 +170,8 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>states</strong> (<em>list of N ndarrays</em>) -- The N leftmost tensors in the MPS-OBC representation of a state of an n-body.
-<a href="#id1"><span class="problematic" id="id2">*</span></a>states*[0] should be an order-2 tensor, and all the others should be order-3 tensors, such that
-<a href="#id3"><span class="problematic" id="id4">*</span></a>states*[i].shape[-1] == <a href="#id5"><span class="problematic" id="id6">*</span></a>states*[i+1].shape[0] (i.e. they can be contracted &quot;in line&quot;).</p>
+<em>states</em> [0] should be an order-2 tensor, and all the others should be order-3 tensors, such that
+<em>states</em> [i].shape[-1] == <em>states</em> [i+1].shape[0] (i.e. they can be contracted &quot;in line&quot;).</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><strong>flag</strong> -- True if <em>states</em> are in a left-canonical form, False otherwise.</p>
@@ -189,8 +189,8 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>states</strong> (<em>list of N ndarrays</em>) -- The N rightmost tensors in the MPS-OBC representation of a state of an n-body.
-<a href="#id7"><span class="problematic" id="id8">*</span></a>states*[-1] should be an order-2 tensor, and all the others should be order-3 tensors, such that
-<a href="#id9"><span class="problematic" id="id10">*</span></a>states*[i].shape[-1] == <a href="#id11"><span class="problematic" id="id12">*</span></a>states*[i+1].shape[0] (i.e. they can be contracted &quot;in line&quot;).</p>
+<em>states</em> [-1] should be an order-2 tensor, and all the others should be order-3 tensors, such that
+<em>states</em> [i].shape[-1] == <em>states</em> [i+1].shape[0] (i.e. they can be contracted &quot;in line&quot;).</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><strong>flag</strong> -- True if <em>states</em> are in a right-canonical form, False otherwise.</p>

@@ -166,7 +166,7 @@
 <dl class="py function">
 <dt id="helper.Fidelity">
 <code class="sig-prename descclassname">helper.</code><code class="sig-name descname">Fidelity</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">psi</span></em>, <em class="sig-param"><span class="n">phi</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper.html#Fidelity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#helper.Fidelity" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the fidelity bewteen two quantum states <em>psi</em>, <em>phi</em> defined as <a href="#id1"><span class="problematic" id="id2">|</span></a>&lt;<em>psi*|*phi</em>&gt;|^2</p>
+<dd><p>Returns the fidelity bewteen two quantum states <em>psi</em>, <em>phi</em> defined as <a href="#id1"><span class="problematic" id="id2">|</span></a>&lt;<em>psi|phi</em>&gt;|^2</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -224,6 +224,7 @@
 <span class="gp">&gt;&gt;&gt; </span><span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span>
 </pre></div>
 </div>
+<img src="Images/left_contract.jpg" alt="Left contraction" width="500" height="300">
 </dd></dl>
 
 <dl class="py function">
@@ -292,19 +293,15 @@ in which the 0-th qubit is the rightmost.</p>
 <dt id="helper.right_contract">
 <code class="sig-prename descclassname">helper.</code><code class="sig-name descname">right_contract</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">states</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper.html#right_contract"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#helper.right_contract" title="Permalink to this definition">¶</a></dt>
 <dd><p>Given the N right-most <em>states</em> of a MPS, computes their contraction with themselves, as in the Example</p>
-<blockquote>
-<div><p>Parameters</p>
-</div></blockquote>
-<dl class="simple">
-<dt>states: list of tensors</dt><dd><p>N right-most <em>states</em> of a MPS</p>
-</dd>
-</dl>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p><strong>Matrix</strong> -- Returns a order 2 tensor.</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>states</strong> (<em>list of tensors</em>) -- N right-most <em>states</em> of a MPS</p>
 </dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>order 2 tensor</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>Matrix</strong> -- Returns a order 2 tensor.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>order 2 tensor</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -313,6 +310,7 @@ in which the 0-th qubit is the rightmost.</p>
 <span class="gp">&gt;&gt;&gt; </span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">H</span>
 </pre></div>
 </div>
+<img src="Images/right_contract.jpg" alt="Right contraction" width="500" height="300">
 </dd></dl>
 
 <dl class="py function">
@@ -372,7 +370,7 @@ The last dimension of MPS[i] should be the same of the first dimension of MPS[i+
 <dd class="field-even"><p><strong>dense_state</strong> -- N-order tensor representing the dense state.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>ndarray of shape ([d] * N)</p>
+<dd class="field-odd"><p>ndarray of shape ([d] ^ N)</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -390,7 +388,7 @@ in left-canonical form, with sufficiently sized bonds so that exactness is maint
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dense_state</strong> (<em>ndarray of shape</em><em> (</em><em>d^N</em><em>,</em><em>)</em>) -- Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]*N) is the (i,j,k...) coefficient
+<li><p><strong>dense_state</strong> (<em>ndarray of shape</em><em> (</em><em>d^N</em><em>,</em><em>)</em>) -- Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]^N) is the (i,j,k...) coefficient
 of the state in the computational basis.</p></li>
 <li><p><strong>N</strong> (<em>integer &gt; 0</em>) -- Number of particles/sites</p></li>
 <li><p><strong>d</strong> (<em>integer &gt; 0</em><em>, </em><em>optional</em>) -- Local dimension of each particle/site. For a qubit, d=2.</p></li>

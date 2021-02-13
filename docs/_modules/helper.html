@@ -204,7 +204,7 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Given the N right-most *states* of a MPS, computes their contraction with themselves, as in the Example</span>
 <span class="sd">    </span>
-<span class="sd">     Parameters</span>
+<span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    states: list of tensors</span>
 <span class="sd">        N right-most *states* of a MPS</span>
@@ -310,7 +310,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dense_state : ndarray of shape (d^N,)</span>
-<span class="sd">        Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]*N) is the (i,j,k...) coefficient </span>
+<span class="sd">        Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]^N) is the (i,j,k...) coefficient </span>
 <span class="sd">        of the state in the computational basis.</span>
 <span class="sd">    N : integer &gt; 0</span>
 <span class="sd">        Number of particles/sites</span>
@@ -371,7 +371,7 @@
 <span class="sd">    </span>
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    dense_state : ndarray of shape ([d] * N)</span>
+<span class="sd">    dense_state : ndarray of shape ([d] ^ N)</span>
 <span class="sd">        N-order tensor representing the dense state.</span>
 
 <span class="sd">    Examples</span>
@@ -489,7 +489,7 @@
 
 <div class="viewcode-block" id="Fidelity"><a class="viewcode-back" href="../helper.html#helper.Fidelity">[docs]</a><span class="k">def</span> <span class="nf">Fidelity</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Returns the fidelity bewteen two quantum states *psi*, *phi* defined as |&lt;*psi*|*phi*&gt;|^2</span>
+<span class="sd">    Returns the fidelity bewteen two quantum states *psi*, *phi* defined as |&lt;*psi|phi*&gt;|^2</span>
 <span class="sd">    </span>
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
