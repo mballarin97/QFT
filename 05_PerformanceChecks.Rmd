@@ -234,10 +234,12 @@ for i,n in enumerate(tqdm(N_manual)):
 #### Save/load data
 
 ```{python}
-np.save("times_quimb_approx", times_quimb_approx)
-np.save("times_quimb_full", times_quimb_full)
-np.save("times_manual_chi", times_manual_chi)
-np.save("times_manual_full", times_manual_full)
+save = False
+if save:
+    np.save("times_quimb_approx", times_quimb_approx)
+    np.save("times_quimb_full", times_quimb_full)
+    np.save("times_manual_chi", times_manual_chi)
+    np.save("times_manual_full", times_manual_full)
 
 # times_quimb_approx = np.load(".\\data\\times_quimb_approx.npy")
 # times_quimb_full = np.load(".\\data\\times_quimb_full.npy")

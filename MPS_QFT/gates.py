@@ -1,9 +1,9 @@
 # Import necessary packages
 import quimb as quimb
+import cirq as cirq
 import numpy as np
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit.circuit import library as lb
-
 # +
 #---------QUIMB-----------
 # Controlled phase shift

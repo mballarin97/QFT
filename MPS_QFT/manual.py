@@ -6,9 +6,10 @@ from ncon import ncon
 from numpy import linalg as LA
 from copy import deepcopy
 
-from helper import right_contract, left_contract
-from helper import to_full_MPS, to_dense, to_approx_MPS
-
+from .helper import right_contract, left_contract
+from .helper import to_full_MPS, to_dense, to_approx_MPS
+import sys
+sys.path.append("./")
 
 # +
 def left_compress(left, right):

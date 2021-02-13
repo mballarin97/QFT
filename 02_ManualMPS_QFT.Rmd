@@ -29,15 +29,15 @@ import quimb
 from copy import deepcopy
 
 #---Our functions---#
-from QFT_MPS.helper import print_state, right_contract, left_contract
-from QFT_MPS.helper import to_full_MPS, to_dense, to_approx_MPS
+from MPS_QFT.helper import print_state, right_contract, left_contract
+from MPS_QFT.helper import to_full_MPS, to_dense, to_approx_MPS
 
-from QFT_MPS.manual import apply_one_qubit_gate, apply_two_qubit_gate_full, apply_two_qubit_gate, max_bond_dimension, left_canonize, right_canonize
+from MPS_QFT.manual import apply_one_qubit_gate, apply_two_qubit_gate_full, apply_two_qubit_gate, max_bond_dimension, left_canonize, right_canonize
 
-from QFT_MPS.gates import cphase_swap_quimb
+from MPS_QFT.gates import cphase_swap_quimb
 
-from QFT_MPS.circuit import qft_circuit_swap_full, qft_circuit_swap_approx
-from QFT_MPS.checks import check_left_canonization, check_right_canonization
+from MPS_QFT.circuit import qft_circuit_swap_full, qft_circuit_swap_approx
+from MPS_QFT.checks import check_left_canonization, check_right_canonization
 ```
 
 ## Graphs for Testing

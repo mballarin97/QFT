@@ -39,7 +39,7 @@ from MPS_QFT.circuit import qft_circuit_qiskit, circ_data, MPS_circ
 ```{python}
 Gates = GATES()
 # Dictionary of the gates
-gates = Gates.gate_dict()
+gates = Gates.gate_dict
 ```
 
 ```{python}

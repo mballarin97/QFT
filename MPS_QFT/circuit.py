@@ -1,11 +1,11 @@
 # Import necessary packages
 import quimb as quimb
+import cirq as cirq
 import numpy as np
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit.circuit import library as lb
-
-from gates import cphase_swap_qiskit, cphase_swap_quimb, GATES, cphase_and_swap_cirq
-from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
+from .gates import cphase_swap_qiskit, cphase_swap_quimb, GATES, cphase_and_swap_cirq
+from .manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
 
 # +
 #--- QFT - MANUAL ---

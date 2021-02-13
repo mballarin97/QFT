@@ -26,12 +26,19 @@ import cirq
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit.circuit import library as lb
 from qiskit.visualization import plot_histogram
+
+import sys
+sys.path.append("./")
 ```
 
 # QFT - Cirq
 
 ```{python}
 from MPS_QFT.gates import cphase_and_swap_cirq
+from MPS_QFT.circuit import qft_circuit_swap_cirq
+```
+
+```{python}
 from MPS_QFT.circuit import qft_circuit_swap_cirq
 ```
 
@@ -69,7 +76,7 @@ from MPS_QFT.circuit import qft_circuit_qiskit
 ```{python}
 qc = QuantumCircuit(4, 4)
 qc.x(3)
-qft_circuit(qc, 4)
+qft_circuit_qiskit(qc, 4)
 qc.measure(np.arange(0, 3), np.arange(0, 3))
 qc.draw('mpl')
 ```
@@ -92,4 +99,8 @@ result = execute(qc, simulator, shots=10000).result()
 
 counts = result.get_counts()
 plot_histogram(counts, title='Bell-State counts')
+```
+
+```{python}
+
 ```

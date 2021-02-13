@@ -1,5 +1,5 @@
 import numpy as np
-from helper import left_contract, right_contract
+from .helper import left_contract, right_contract
 
 def check_left_canonization(states):
     """
@@ -9,8 +9,8 @@ def check_left_canonization(states):
     ----------
     states : list of N ndarrays
         The N leftmost tensors in the MPS-OBC representation of a state of an n-body. 
-        *states*[0] should be an order-2 tensor, and all the others should be order-3 tensors, such that
-        *states*[i].shape[-1] == *states*[i+1].shape[0] (i.e. they can be contracted "in line").
+        *states* [0] should be an order-2 tensor, and all the others should be order-3 tensors, such that
+        *states* [i].shape[-1] == *states* [i+1].shape[0] (i.e. they can be contracted "in line").
     
     Returns
     -------
@@ -36,8 +36,8 @@ def check_right_canonization(states):
     ----------
     states : list of N ndarrays
         The N rightmost tensors in the MPS-OBC representation of a state of an n-body. 
-        *states*[-1] should be an order-2 tensor, and all the others should be order-3 tensors, such that
-        *states*[i].shape[-1] == *states*[i+1].shape[0] (i.e. they can be contracted "in line").
+        *states* [-1] should be an order-2 tensor, and all the others should be order-3 tensors, such that
+        *states* [i].shape[-1] == *states* [i+1].shape[0] (i.e. they can be contracted "in line").
     
     Returns
     -------

@@ -3,6 +3,8 @@ import numpy as np
 import quimb as quimb
 from ncon import ncon
 from numpy import linalg as LA
+from qiskit import QuantumCircuit, execute, Aer
+
 
 def print_state(dense_state):
     """
@@ -46,7 +48,7 @@ def right_contract(states):
     """
     Given the N right-most *states* of a MPS, computes their contraction with themselves, as in the Example
     
-     Parameters
+    Parameters
     ----------
     states: list of tensors
         N right-most *states* of a MPS
@@ -152,7 +154,7 @@ def to_full_MPS(dense_state, N, d=2):
     Parameters
     ----------
     dense_state : ndarray of shape (d^N,)
-        Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]*N) is the (i,j,k...) coefficient 
+        Input dense state, such that the (i,j,k...) entry in dense_state.reshape([d]^N) is the (i,j,k...) coefficient 
         of the state in the computational basis.
     N : integer > 0
         Number of particles/sites
@@ -213,7 +215,7 @@ def to_dense(MPS):
     
     Returns
     -------
-    dense_state : ndarray of shape ([d] * N)
+    dense_state : ndarray of shape ([d] ^ N)
         N-order tensor representing the dense state.
 
     Examples
@@ -331,7 +333,7 @@ def get_figsize(wf=0.5, hf=(5.**0.5-1.0)/2.0, ):
 
 def Fidelity(psi, phi):
     """
-    Returns the fidelity bewteen two quantum states *psi*, *phi* defined as |<*psi*|*phi*>|^2
+    Returns the fidelity bewteen two quantum states *psi*, *phi* defined as |<*psi|phi*>|^2
     
     Parameters
     ----------
