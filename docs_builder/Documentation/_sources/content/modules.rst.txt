@@ -1,0 +1,5 @@
+Documentation
+=============
+
+.. automodule:: circuit
+   :members:
