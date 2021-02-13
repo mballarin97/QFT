@@ -10,11 +10,11 @@ sys.path.append(parentdir)
 import numpy as np
 import quimb
 
-from manual import left_canonize, right_canonize
-from checks import check_left_canonization, check_right_canonization
-from test_mps import new_random_state
+from .manual import left_canonize, right_canonize
+from .checks import check_left_canonization, check_right_canonization
+from .test_mps import new_random_state
 
-from helper import to_full_MPS, to_approx_MPS
+from .helper import to_full_MPS, to_approx_MPS
 
 #Physical dimension of a site (2 for qubits)
 d = 2

@@ -11,9 +11,9 @@ import numpy as np
 from numpy import linalg as LA
 import quimb #For gates
 
-from helper import to_full_MPS, to_approx_MPS, to_dense
-from manual import tensor_trace, max_bond_dimension
-from checks import check_left_canonization
+from .helper import to_full_MPS, to_approx_MPS, to_dense
+from .manual import tensor_trace, max_bond_dimension
+from .checks import check_left_canonization
 
 #Physical dimension of a site (2 for qubits)
 d = 2

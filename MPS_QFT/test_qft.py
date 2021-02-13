@@ -7,15 +7,15 @@ currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
-from gates import cphase_and_swap_cirq
-from circuit import qft_circuit_swap_full, qft_circuit_swap_approx, qft_circuit_swap_cirq
-from helper import to_full_MPS, to_approx_MPS, to_dense
+from .gates import cphase_and_swap_cirq
+from .circuit import qft_circuit_swap_full, qft_circuit_swap_approx, qft_circuit_swap_cirq
+from .helper import to_full_MPS, to_approx_MPS, to_dense
 
 import numpy as np
 from numpy import linalg as LA
 import cirq
 
-from test_mps import new_random_state
+from .test_mps import new_random_state
 
 #Physical dimension of a site (2 for qubits)
 d = 2
