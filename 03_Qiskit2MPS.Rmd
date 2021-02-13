@@ -16,7 +16,7 @@ jupyter:
 ```{python}
 # Visualization
 import matplotlib.pyplot as plt
-from helper import print_state
+from MPS_QFT.helper import print_state
 
 # Numpy
 import numpy as np
@@ -32,25 +32,14 @@ import quimb as quimb
 from ncon import ncon
 
 #gates
-from gates import CPHASE, cphase_swap_qiskit
-from circuit import qft_circuit_qiskit, circ_data, MPS_circ
+from MPS_QFT.gates import CPHASE, cphase_swap_qiskit, GATES
+from MPS_QFT.circuit import qft_circuit_qiskit, circ_data, MPS_circ
 ```
 
 ```{python}
-# Controlled NOT
-CNOT = quimb.controlled('not')
-
-# Hadamard
-H = quimb.gen.operators.hadamard()
-
-# SWAP
-SWAP = quimb.gen.operators.swap()
-
+Gates = GATES()
 # Dictionary of the gates
-gates = {'h': H, 
-        'cx': CNOT,
-        'cp': CPHASE,
-        'swap': SWAP}
+gates = Gates.gate_dict()
 ```
 
 ```{python}
@@ -82,8 +71,8 @@ qc.draw('mpl')
 
 ```{python}
 psi0 = quimb.tensor.MPS_computational_state('00', tags = 'psi0')
-psi0.gate_(H, 0, tags='h', max_bond=10, contract='split-gate')
-psi0.gate_(CNOT, (0, 1), tags='cx', max_bond=1, contract='split-gate')
+psi0.gate_(gates['h'], 0, tags='h', max_bond=10, contract='split-gate')
+psi0.gate_(gates['cx'], (0, 1), tags='cx', max_bond=1, contract='split-gate')
 psi0.graph(color=['cx', 'h', 'psi0'], show_inds=True) #Plot the network
 print_state(psi0.to_dense())
 ```

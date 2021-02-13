@@ -27,7 +27,7 @@ def check_left_canonization(states):
             return False
         
     return True    
-    
+
 def check_right_canonization(states):
     """
     Check if *states* are in right-canonical form.

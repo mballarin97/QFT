@@ -4,7 +4,7 @@ import numpy as np
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit.circuit import library as lb
 
-from gates import cphase_swap_qiskit, cphase_swap_quimb, GATES
+from gates import cphase_swap_qiskit, cphase_swap_quimb, GATES, cphase_and_swap_cirq
 from manual import apply_two_qubit_gate_full, max_bond_dimension, apply_two_qubit_gate, apply_one_qubit_gate
 
 # +
@@ -102,6 +102,74 @@ def qft_circuit_qiskit(circuit, n):
         cphase_swap_qiskit(circuit, i, i+1, np.pi*1/2**(i+1))
         
     return qft_circuit_qiskit(circuit, n-1)
+
+# ---QFT - CIRQ---
+def qft_circuit_swap_cirq(qubits, circuit=[]):
+    """
+    Build a circuit implementing the QFT algorithm on the given *qubits*. 
+    The order of *qubits* is preserved by SWAP operations.
+    Implemented using only local operations, i.e. gates acting on neighbouring qubits.
+    Adapted from: https://github.com/quantumlib/Cirq/blob/master/examples/quantum_fourier_transform.py and extended to
+    n generic qubits through recursion.
+    
+    Parameters
+    ----------
+    qubits: cirq.LineQubit
+        qubits
+    circuit: list
+        list of directives to create the quantum circuit
+        
+    Returns
+    -------
+    circuit: cirq.Circuit
+        quantum circuit where we have applied the QFT
+    """
+    n = len(qubits)
+    assert n > 0, "Number of qubits must be > 0"
+    
+    if (n == 1):
+        circuit.append(cirq.H(qubits[0]))
+        return cirq.Circuit(circuit, strategy=cirq.InsertStrategy.EARLIEST)
+    else:
+        circuit.append(cirq.H(qubits[0]))
+        circuit.extend(cphase_and_swap_cirq(qubits[i], qubits[i+1], 1/2**(i+1)) for i in range(n-1))
+        return qft_circuit_swap_cirq(qubits[:n-1], circuit)
+
+
+# ---QFT - QUIMB---
+def qft_circuit_quimb(mps, n, chi=2):
+    """
+        Apply the QFT to the matrix product state *mps* with a bond dimension of *chi*
+        in a recursive way
+        
+        Parameters
+        ----------
+            mps : quimb.tensor.tensor_1d.MatrixProductState
+                Matrix product state to which we want to apply the QFT
+            n       : int
+                number of qubits in *mps*
+            chi : int, optional
+                Bond dimension of the MPS. Default to 2
+                
+        Returns
+        -------
+            mps: quimb.tensor.tensor_1d.MatrixProductState
+                Matrix product state to which we have applied the QFT
+    
+    """
+    H = quimb.hadamard()
+    if n == 0:
+        return mps
+    elif n==1:
+        mps.gate_(H, 0, tags='H', contract=True) 
+        return mps
+    
+    mps.gate_(H, 0, tags='H', contract=True)
+    for i in range(n-1):
+        mps.gate_(cphase_swap_quimb(1/2**(i+1)), (i, i+1), tags='Cphase_swap', max_bond=chi, contract='swap+split')
+        
+    return qft_circuit_quimb(mps, n-1)
+
 
 #---MPS-QISKIT INTERFACE---
 class circ_data():
