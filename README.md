@@ -19,4 +19,4 @@ The actual code for the functions invoked in the notebooks can be imported from 
 
 All the main functions can be automatically tested by running the command `pytest` in the main project folder.
 
-Extensive documentation for all the code is available at `Docs/Documentation/index.html`.
+Extensive documentation for all the code is available at `docs/Documentation/index.html` or at this [link](https://mballarin97.github.io/QFT/).
