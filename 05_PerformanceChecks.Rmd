@@ -241,19 +241,61 @@ if save:
     np.save("times_manual_chi", times_manual_chi)
     np.save("times_manual_full", times_manual_full)
 
-# times_quimb_approx = np.load(".\\data\\times_quimb_approx.npy")
-# times_quimb_full = np.load(".\\data\\times_quimb_full.npy")
-# times_manual_chi = np.load(".\\data\\times_manual_chi.npy")
-# times_manual_full = np.load(".\\data\\times_manual_full.npy")
+times_quimb_approx = np.load(".\\data\\times_quimb_approx.npy")
+times_quimb_full = np.load(".\\data\\times_quimb_full.npy")
+times_manual_chi = np.load(".\\data\\times_manual_chi.npy")
+times_manual_full = np.load(".\\data\\times_manual_full.npy")
 
 N_quimb = np.arange(4, 17, dtype=int)
 N_manual = np.arange(4, 13, dtype=int)
 
 ```
 
+### Fit
+
+```{python}
+#Data to be fit is in xs and ys
+from scipy.optimize import curve_fit
+from scipy import stats
+
+def straight_line(x, a, b):
+    return a + b*x
+
+fit_log_xs = np.log10(N_quimb) #Move to log-log space
+
+#mask
+mask = fit_log_xs > np.log10(6)
+fit_log_xs = fit_log_xs[mask]
+
+fit_log_ys_q_approx = np.log10(times_quimb_approx[mask,0])
+err_log_q_approx = np.log10(times_quimb_approx[mask,1])
+
+fit_log_ys_q = np.log10(times_quimb_full[mask,0])
+err_log_q = np.log10(times_quimb_full[mask,1])
+
+fit_log_ys_man = np.log10(times_manual_chi[mask,0])
+err_log_man = np.log10(times_manual_chi[mask,1])
+
+popt_q_approx, pcov_q_approx = curve_fit(straight_line, fit_log_xs, fit_log_ys_q_approx, sigma=err_log_q_approx)
+popt_q, pcov_q = curve_fit(straight_line, fit_log_xs, fit_log_ys_q, sigma= err_log_q)
+popt_man, pcov_man = curve_fit(straight_line, fit_log_xs, fit_log_ys_man, sigma = err_log_man)
+
+#b
+b_q_approx = popt_q_approx[-1]
+b_q = popt_q[-1]
+b_man = popt_man[-1]
+
+#errors on b
+err_b_approx = np.sqrt(np.diag(pcov_q_approx))[-1]
+err_b_q = np.sqrt(np.diag(pcov_q))[-1]
+err_b_man = np.sqrt(np.diag(pcov_man))[-1]
+
+x_fit = np.linspace(N_quimb[0], N_quimb[-1], 100) #put the plot range here
+
+```
+
 ```{python}
 fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
-#fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20))
 
 # create a color palette
 palette = plt.get_cmap('Set2')
@@ -268,12 +310,17 @@ ax[0].plot(N_quimb, times_manual_chi[:, 0], color=palette(0), linestyle='-.', la
 ax[0].fill_between(N_quimb, times_manual_chi[:,0]-times_manual_chi[:,1], 
                    times_manual_chi[:,0]+times_manual_chi[:,1],
                    color=palette(0), alpha=0.4)
+#Fit
+ax[0].plot(x_fit, 10**(straight_line(np.log10(x_fit), *popt_q_approx)), '--r', 
+           linewidth=0.8, label=f'$b=({np.round(b_q_approx, 1)}\\pm{np.round(err_b_approx, 1)})$') 
+ax[0].plot(x_fit, 10**(straight_line(np.log10(x_fit), *popt_man)), '--g', 
+           linewidth=0.8, label=f'$b=({np.round(b_man, 1)}\\pm{np.round(err_b_man, 1)})$') 
 
 ax[0].set_ylabel('Time [s]')
 ax[0].set_xlabel('Number of qubits')
 ax[0].set_title('Time scaling for QFT - $\chi=2$')
 ax[0].legend(loc='best')
-ax[0].set_yscale('log')
+ax[0].loglog()
 
 #Comparison of "full" computations of QFT
 ax[1].plot(N_quimb, times_quimb_full[:, 0], color=palette(1), linestyle=':', label='quimb')
@@ -286,11 +333,16 @@ ax[1].fill_between(N_manual, times_manual_full[:,0]-times_manual_full[:,1],
                    times_manual_full[:,0]+times_manual_full[:,1],
                    color=palette(0), alpha=0.4)
 
+#Fit
+ax[1].plot(x_fit, 10**(straight_line(np.log10(x_fit), *popt_q)), '--r', 
+           linewidth=0.8, label=f'$b=({np.round(b_q, 1)}\\pm{np.round(err_b_q, 1)})$') 
+
+
 #ax[1].set_ylabel('Time [s]')
 ax[1].set_xlabel('Number of qubits')
-ax[1].set_title('Time scaling fot QFT - $\chi=2^{\\left \\lfloor \\sfrac{N}{2} \\right \\rfloor}$')
+ax[1].set_title('Time scaling fot QFT - $\chi=2^{\\left \\lfloor n/2 \\right \\rfloor}$')
 ax[1].legend(loc='best')
-ax[1].set_yscale('log')
+ax[1].loglog()
 
 
 plt.show()
@@ -355,57 +407,63 @@ for i, x in enumerate(tqdm(chis)):
 #### Save/load data
 
 ```{python}
-np.save("time_chis_quimb", time_chis_quimb)
-np.save("time_chis", time_chis)
+# np.save("time_chis_quimb", time_chis_quimb)
+# np.save("time_chis", time_chis)
 
-# time_chis = np.load(".\\data\\time_chis.npy")
-# time_chis_quimb = np.load(".\\data\\time_chis_quimb.npy")
+time_chis = np.load(".\\data\\time_chis.npy")
+time_chis_quimb = np.load(".\\data\\time_chis_quimb.npy")
 
 chis = np.array([2**i for i in range(2,6)])
 
 Ns = np.arange(4, 17, dtype=int)
+
+N_list = np.array( [8, 16] )
+
+idx_N = N_list - 4
+
+chi_x = np.array([2**i for i in range(1,6)])
+```
+
+```{python}
+y_man = time_chis.transpose(1,0,2)
+y_q   = time_chis_quimb.transpose(1,0,2)
+
+y_man = np.append(times_manual_chi.reshape(1,13,2).transpose(1,0,2), y_man, axis=1)
+y_q = np.append(times_quimb_approx.reshape(1,13,2).transpose(1,0,2), y_q, axis=1)
+
 ```
 
 ```{python}
 fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
-#fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20))
 
 #Manual implementation
-ax[0].plot(Ns, times_manual_chi[:, 0], label='$\chi=2$', linestyle='-.', color=palette(0), alpha=0.8)
-ax[0].fill_between(Ns, times_manual_chi[:,0]-times_manual_chi[:,1], 
-                   times_manual_chi[:,0]+times_manual_chi[:,1],
-                   color=palette(0), alpha=0.6)
 
-for i in range(len(chis)):
-    ax[0].plot(Ns, time_chis[i, :, 0], label='$\chi='+str(chis[i])+'$', 
+for i in range(len(N_list)):
+    ax[0].plot(chi_x, y_man[idx_N[i], :, 0], label='$n='+str(N_list[i])+'$', 
                color=palette(i+2))#, alpha=0.2*(len(chis)-i))
-    ax[0].fill_between(Ns, time_chis[i, :, 0]-time_chis[i, :, 1], 
-                       time_chis[i, :, 0]+time_chis[i, :, 1],
+    ax[0].fill_between(chi_x, y_man[idx_N[i], :, 0]-y_man[idx_N[i], :, 1], 
+                       y_man[idx_N[i], :, 0]+y_man[idx_N[i], :, 1],
                        color=palette(i+2), alpha=0.1*(len(chis)-i))
 
 ax[0].set_ylabel('Time [s]')
-ax[0].set_xlabel('Number of qubits')
+ax[0].set_xlabel('Bond dimension $\chi$')
 ax[0].set_title('Manual QFT circuit')
 ax[0].legend(loc='best')
-ax[0].set_yscale('log')
+ax[0].loglog()
 
 #Quimb implementation
-ax[1].plot(Ns, times_quimb_approx[:, 0], color=palette(1), linestyle=':', label='$\chi=2$', alpha=0.8)
-ax[1].fill_between(Ns, times_quimb_approx[:,0]-times_quimb_approx[:,1], 
-                   times_quimb_approx[:,0]+times_quimb_approx[:,1],
-                   color=palette(1), alpha=0.6)
 
-for i in range(len(chis)):
-    ax[1].plot(Ns, time_chis_quimb[i, :, 0], label='$\chi='+str(chis[i])+'$',
+for i in range(len(N_list)):
+    ax[1].plot(chi_x, y_q[idx_N[i], :, 0], label='$n='+str(N_list[i])+'$',
                color=palette(i+2))
-    ax[1].fill_between(Ns, time_chis_quimb[i, :, 0]-time_chis_quimb[i, :, 1], 
-                   time_chis_quimb[i, :, 0]+time_chis_quimb[i, :, 1],
+    ax[1].fill_between(chi_x, y_q[idx_N[i], :, 0]-y_q[idx_N[i], :, 1], 
+                   y_q[idx_N[i], :, 0]+y_q[idx_N[i], :, 1],
                    color=palette(i+2), alpha=0.1*(len(chis)-i))
 
-ax[1].set_xlabel('Number of qubits')
+ax[1].set_xlabel('Bond dimension $\chi$')
 ax[1].set_title('quimb QFT circuit')
-ax[1].legend(loc='best')
-ax[1].set_yscale('log')
+ax[1].legend(loc='best', )
+ax[1].loglog()
 
 plt.show()
 fig.tight_layout()
@@ -582,8 +640,33 @@ N_qiskit = np.arange(4, 26, dtype=int)
 ```
 
 ```{python}
+#Data to be fit is in xs and ys
+from scipy.optimize import curve_fit
+from scipy import stats
+
+def straight_line(x, a, b):
+    return a + b*x
+
+fit_log_xs = np.log10(N_tot) #Move to log-log space
+
+#mask
+mask = fit_log_xs > np.log10(6)
+fit_log_xs = fit_log_xs[mask]
+
+fit_q_tot = np.log10(times_quimb_auto[mask,0])
+
+popt_q_tot, pcov_tot = curve_fit(straight_line, fit_log_xs, fit_q_tot)
+
+#b
+b_q_tot = popt_q_tot[-1]
+err_b_tot = np.sqrt(np.diag(pcov_tot))[-1]
+
+x_fit = np.linspace(N_tot[0], N_tot[-1], 100) #put the plot range here
+
+```
+
+```{python}
 fig, ax = plt.subplots(figsize=get_figsize(0.95)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
-#fig, ax = plt.subplots(figsize=get_figsize(0.95))
 
 #quimb implementation
 plt.plot(N_tot, times_quimb_auto[:, 0], color=palette(1), linestyle=':', label='quimb')
@@ -609,16 +692,25 @@ plt.fill_between(N_qiskit, times_qiskit[:,0]-times_qiskit[:,1],
                    times_qiskit[:,0]+times_qiskit[:,1],
                    color='paleturquoise', alpha=0.6)
 
+#Fit
+plt.plot(x_fit, 10**(straight_line(np.log10(x_fit), *popt_q_tot)), '--r', 
+           linewidth=0.8, label=f'$b=({np.round(b_q_tot, 2)}\\pm{np.round(err_b_tot, 2)})$') 
+
+
 plt.ylabel('Time [s]')
 plt.xlabel('Number of qubits')
 plt.title('Time scaling for QFT circuit')
 plt.legend(loc='best')
-plt.yscale('log')
+plt.loglog()
 
 plt.show()
 
 fig.tight_layout()
 plt.savefig("max_n_qubits.pgf") #Save as pdf in the "report_plots" folder
+
+```
+
+```{python}
 
 ```
 
