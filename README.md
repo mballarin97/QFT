@@ -5,6 +5,8 @@ The main results are shown in \(3\) Jupyter Notebooks, saved in the R-Markdown (
 1. `01_cirq-Qiskit_QFT.Rmd` contains implementations for the Quantum Fourier Transform (QFT) circuit in the `Cirq` and `Qiskit` libraries for quantum computing.
 2. `02_ManualMPS_QFT.Rmd` shows how to convert quantum states from a dense representation to the Matrix Product States with Open Boundary Conditions (MPS-OBC) representation "manually", i.e. without using external libraries for tensor networks. Functions for applying 1 or 2-qubit quantum gates to an MPS are provided. This allows applying the QFT to MPS using Time Evolving Block Decimation (TEBD) methods. The result is then compared to that obtained from the tensor library `quimb`.
 3. `03_Qiskit2MPS.Rmd` contains a custom interface that can convert simple quantum circuits programmed in `Qiskit` to their `Quimb` analogues, so that they can be immediately applied to MPS. We use again a QFT implementation as an example for such procedure.
+4. `04_CorrectnessCheck.Rmd`. To check the correctness of the code, two different initial states are chosen, the GHZ and a randomone, with a fixed number of qubits N=7. We then apply the QFT and compare the results from `quimb` and our manual implementation.
+5. `05_PerformanceCheck.Rmd`. We check the efficiency of the code, comparing `quimb`, `qiskit`, `cirq` and our implementation.
 
 <!-- TODO: Add some more comments/docs in the notebooks. They serve as examples. -->
 
@@ -19,4 +21,4 @@ The actual code for the functions invoked in the notebooks can be imported from 
 
 All the main functions can be automatically tested by running the command `pytest` in the main project folder.
 
-Extensive documentation for all the code is available at `Docs/Documentation/index.html`.
+Extensive documentation for all the code is available at `docs/Documentation/index.html` or at this [link](https://mballarin97.github.io/QFT/).

@@ -6,7 +6,7 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.2'
-      jupytext_version: 1.3.2
+      jupytext_version: 1.9.1
   kernelspec:
     display_name: Python 3
     language: python
@@ -26,50 +26,31 @@ import cirq
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit.circuit import library as lb
 from qiskit.visualization import plot_histogram
+
+import sys
+sys.path.append("./")
 ```
 
 # QFT - Cirq
 
 ```{python}
-def cphase_and_swap(ctrl, target, phase):
-    """
-    Combine the CPHASE gate with the SWAP operation, used for QFT algorithm.
-    Input
-        crtl: 
-        target:
-        phase:
-    Return
-        cirq blabla
-    """
-    yield cirq.CZ(ctrl, target) ** phase
-    yield cirq.SWAP(ctrl, target)
+from MPS_QFT.gates import cphase_and_swap_cirq
+from MPS_QFT.circuit import qft_circuit_swap_cirq
+```
 
-
-def qft_circuit_swap(qubits, circuit=[]):
-    """
-    Build a circuit implementing the QFT algorithm on the given @qubits. 
-    The order of @qubits is preserved by SWAP operations.
-    Implemented using only local operations, i.e. gates acting on neighbouring qubits.
-    Adapted from: https://github.com/quantumlib/Cirq/blob/master/examples/quantum_fourier_transform.py and extended to
-    n generic qubits through recursion.
-    """
-    n = len(qubits)
-    assert n > 0, "Number of qubits must be > 0"
-    
-    if (n == 1):
-        circuit.append(cirq.H(qubits[0]))
-        return cirq.Circuit(circuit, strategy=cirq.InsertStrategy.EARLIEST)
-    else:
-        circuit.append(cirq.H(qubits[0]))
-        circuit.extend(cphase_and_swap(qubits[i], qubits[i+1], 1/2**(i+1)) for i in range(n-1))
-        return qft_circuit_swap(qubits[:n-1], circuit)
+```{python}
+from MPS_QFT.circuit import qft_circuit_swap_cirq
 ```
 
 ```{python}
 N=4
 qubits = cirq.LineQubit.range(N)
-circuit = qft_circuit_swap(qubits, [])
+circuit = qft_circuit_swap_cirq(qubits, [])
 print(circuit)
+```
+
+```{python}
+type(qubits[1])
 ```
 
 ```{python}
@@ -85,48 +66,17 @@ result = simulator.simulate(circuit, initial_state=ghz)
 print(np.around(result.final_state_vector, 3))
 ```
 
-```{python}
-
-```
-
-```{python}
-# simulator.simulate?
-```
-
 # QFT - Qiskit
 
 ```{python}
-def cphase_swap(circuit, control, target, phase):
-    circuit.cp(phase, control, target)
-    circuit.swap(control, target)
-    
-def qft_circuit(circuit, n):
-    """
-    Apply the rotations needed for the QFT
-        Parameters:
-            circuit : quantum circuit
-            n       : int
-                number of qubits in @circuit
-    
-    """
-    if n == 0:
-        return circuit
-    elif n==1:
-        circuit.h(0)
-        return circuit
-    
-    circuit.h(0)
-    for i in range(n-1):
-        cphase_swap(circuit, i, i+1, 1/2**(i+1))
-        
-    return qft_circuit(circuit, n-1)
-
+from MPS_QFT.gates import cphase_swap_qiskit
+from MPS_QFT.circuit import qft_circuit_qiskit
 ```
 
 ```{python}
 qc = QuantumCircuit(4, 4)
 qc.x(3)
-qft_circuit(qc, 4)
+qft_circuit_qiskit(qc, 4)
 qc.measure(np.arange(0, 3), np.arange(0, 3))
 qc.draw('mpl')
 ```
@@ -149,4 +99,8 @@ result = execute(qc, simulator, shots=10000).result()
 
 counts = result.get_counts()
 plot_histogram(counts, title='Bell-State counts')
+```
+
+```{python}
+
 ```

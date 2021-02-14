@@ -1,9 +1,9 @@
 # Import necessary packages
 import quimb as quimb
+import cirq as cirq
 import numpy as np
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit.circuit import library as lb
-
 # +
 #---------QUIMB-----------
 # Controlled phase shift
@@ -110,3 +110,20 @@ def cphase_swap_qiskit(circuit, control, target, phase):
     circuit.cp(phase, control, target)
     circuit.swap(control, target)
 
+
+# ------- CIRQ -------
+def cphase_and_swap_cirq(ctrl, target, phase):
+    """
+    Combine the CPHASE gate with the SWAP operation, used for QFT algorithm.
+    Input
+        crtl: cirq.devices.line_qubit.LineQubit
+            control qubit
+        target: cirq.devices.line_qubit.LineQubit
+            target qubit
+        phase: double
+            phase to apply in radiants
+    Return
+        cirq gate
+    """
+    yield cirq.CZ(ctrl, target) ** phase
+    yield cirq.SWAP(ctrl, target)
