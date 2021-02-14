@@ -225,7 +225,7 @@ def apply_two_qubit_gate(gate_matrix, pos, state, chi=2):
     
     #---Set site at @pos to center of orthogonality (mixed canonical form)---#
     if pos > 0: #left-canonization
-        state = left_canonize(state[:pos]) + state[pos:]
+        state = left_canonize(state[:pos+1]) + state[pos+1:]
     if pos < N-1: #right-canonization
         state = state[:pos] + right_canonize(state[pos:])
         
