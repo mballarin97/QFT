@@ -6,7 +6,7 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.2'
-      jupytext_version: 1.9.1
+      jupytext_version: 1.3.2
   kernelspec:
     display_name: Python 3
     language: python
@@ -17,7 +17,7 @@ jupyter:
 # Visualization
 import matplotlib.pyplot as plt
 import matplotlib
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 from time import time
 from copy import deepcopy
 # %config InlineBackend.figure_format = 'svg' # Makes the images look nice
@@ -130,10 +130,10 @@ times_quimb_approx = np.zeros( (len(N_quimb), 2) )
 
 for i, n in enumerate(tqdm(N_quimb)):
     times = []
+    #GHZ initial state
+    state = quimb.tensor.tensor_gen.MPS_ghz_state(n) #do not measure time to generate state!
     for _ in range(50):
         start = time()
-        #GHZ initial state
-        state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
         
         qc = QuantumCircuit(n)
         qft_circuit_qiskit(qc, n)
@@ -155,10 +155,11 @@ times_quimb_full = np.zeros( (len(N_quimb), 2) )
 
 for i, n in enumerate(tqdm(N_quimb)):
     times = []
+    #GHZ initial state
+    state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
     for _ in range(50):
         start = time()
-        #GHZ initial state
-        state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+        
         #choose the maximum bond dimension possible
         chi = 2**(np.floor(n/2)) 
         
@@ -183,15 +184,15 @@ times_manual_chi = np.zeros( (len(N_quimb), 2) )
 
 for i,n in enumerate(tqdm(N_quimb)):
     times = []
+    
+    #GHZ initial state
+    state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+    mps = [s.data for s in state]
+    state = [mps[0]] + [s.transpose(0,2,1) for s in mps[1:-1]] + [mps[-1]]
+    
     for _ in range(50):
         start = time()
-        #GHZ initial state
-        state = np.zeros(2**n)
-        state[0] = 1
-        state[-1] = 1
-        state = state / np.sqrt(2)
-        
-        state = to_approx_MPS(state, N=n, d=2, chi=2)
+    
         result = qft_circuit_swap_approx(state, n, chi=2)
         result = to_dense(result).flatten()
         
@@ -207,21 +208,21 @@ for i,n in enumerate(tqdm(N_quimb)):
 ```{python}
 #run QFT on different number of qubits, store execution times
 #manual implementation with maximum choice of bond dimension
-N_manual = np.arange(4, 13, dtype=int)
+N_manual = np.arange(4, 17, dtype=int)
 
 times_manual_full = np.zeros( (len(N_manual), 2) )
 
 for i,n in enumerate(tqdm(N_manual)):
     times = []
+    
+    #GHZ initial state
+    state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+    mps = [s.data for s in state]
+    state = [mps[0]] + [s.transpose(0,2,1) for s in mps[1:-1]] + [mps[-1]]
+    
     for _ in range(50):
         start = time()
-        #GHZ initial state
-        state = np.zeros(2**n)
-        state[0] = 1
-        state[-1] = 1
-        state = state / np.sqrt(2)
         
-        state = to_full_MPS(state, d=2, N=n)
         result = qft_circuit_swap_full(state, n)
         result = to_dense(result).flatten()
         
@@ -234,20 +235,20 @@ for i,n in enumerate(tqdm(N_manual)):
 #### Save/load data
 
 ```{python}
-save = False
+save = True
 if save:
     np.save("times_quimb_approx", times_quimb_approx)
     np.save("times_quimb_full", times_quimb_full)
     np.save("times_manual_chi", times_manual_chi)
     np.save("times_manual_full", times_manual_full)
 
-times_quimb_approx = np.load(".\\data\\times_quimb_approx.npy")
-times_quimb_full = np.load(".\\data\\times_quimb_full.npy")
-times_manual_chi = np.load(".\\data\\times_manual_chi.npy")
-times_manual_full = np.load(".\\data\\times_manual_full.npy")
+# times_quimb_approx = np.load(".\\data\\times_quimb_approx.npy")
+# times_quimb_full = np.load(".\\data\\times_quimb_full.npy")
+# times_manual_chi = np.load(".\\data\\times_manual_chi.npy")
+# times_manual_full = np.load(".\\data\\times_manual_full.npy")
 
-N_quimb = np.arange(4, 17, dtype=int)
-N_manual = np.arange(4, 13, dtype=int)
+# N_quimb = np.arange(4, 17, dtype=int)
+# N_manual = np.arange(4, 17, dtype=int)
 
 ```
 
@@ -295,10 +296,15 @@ x_fit = np.linspace(N_quimb[0], N_quimb[-1], 100) #put the plot range here
 ```
 
 ```{python}
-fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.20)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
+fig, ax = plt.subplots(1, 2, figsize=(6.68, 2.35)) #the first parameter is the width fraction. .45 = half-page (spans one column), .95 = full-page (spans both columns) (accounting for a .05 margin)
 
 # create a color palette
 palette = plt.get_cmap('Set2')
+
+ax[0].set_ylim(1e-4, 5)
+ax[1].set_ylim(1e-4, 5)
+
+
 
 #Comparison of "approximated" computations of QFT
 ax[0].plot(N_quimb, times_quimb_approx[:, 0], color=palette(1), linestyle=':', label='quimb')
@@ -312,9 +318,9 @@ ax[0].fill_between(N_quimb, times_manual_chi[:,0]-times_manual_chi[:,1],
                    color=palette(0), alpha=0.4)
 #Fit
 ax[0].plot(x_fit, 10**(straight_line(np.log10(x_fit), *popt_q_approx)), '--r', 
-           linewidth=0.8, label=f'$b=({np.round(b_q_approx, 1)}\\pm{np.round(err_b_approx, 1)})$') 
+           linewidth=0.8, label=f'$b=({np.round(b_q_approx, 1)}\\pm{np.round(err_b_approx, 2)})$') 
 ax[0].plot(x_fit, 10**(straight_line(np.log10(x_fit), *popt_man)), '--g', 
-           linewidth=0.8, label=f'$b=({np.round(b_man, 1)}\\pm{np.round(err_b_man, 1)})$') 
+           linewidth=0.8, label=f'$b=({np.round(b_man, 1)}\\pm{np.round(err_b_man, 2)})$') 
 
 ax[0].set_ylabel('Time [s]')
 ax[0].set_xlabel('Number of qubits')
@@ -335,15 +341,26 @@ ax[1].fill_between(N_manual, times_manual_full[:,0]-times_manual_full[:,1],
 
 #Fit
 ax[1].plot(x_fit, 10**(straight_line(np.log10(x_fit), *popt_q)), '--r', 
-           linewidth=0.8, label=f'$b=({np.round(b_q, 1)}\\pm{np.round(err_b_q, 1)})$') 
+           linewidth=0.8, label=f'$b=({np.round(b_q, 1)}\\pm{np.round(err_b_q, 2)})$') 
 
 
 #ax[1].set_ylabel('Time [s]')
 ax[1].set_xlabel('Number of qubits')
-ax[1].set_title('Time scaling fot QFT - $\chi=2^{\\left \\lfloor n/2 \\right \\rfloor}$')
-ax[1].legend(loc='best')
+ax[1].set_title('Time scaling for QFT - $\chi=2^{\\left \\lfloor n/2 \\right \\rfloor}$')
+ax[1].legend(loc='lower right')
 ax[1].loglog()
 
+ticks = [4,5,6,7,8,9,10,16]
+ax[0].set_xticks(ticks)
+ax[1].set_xticks(ticks)
+ax[0].set_xticklabels(['${}$'.format(l) for l in ticks])
+ax[1].set_xticklabels(['${}$'.format(l) for l in ticks])
+
+ax[0].get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+ax[1].get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+
+ax[0].set_xlim(5,16)
+ax[1].set_xlim(5,16)
 
 plt.show()
 fig.tight_layout()
@@ -365,15 +382,17 @@ time_chis = np.zeros( (len(chis), len(Ns), 2) )
 for i, x in enumerate(tqdm(chis)):
     for j, N in enumerate(Ns):
         times = []
+        
+        #GHZ initial state
+        state = quimb.tensor.tensor_gen.MPS_ghz_state(N) 
+        mps = [s.data for s in state]
+        state = [mps[0]] + [s.transpose(0,2,1) for s in mps[1:-1]] + [mps[-1]]
+    
         for _ in range(50):
             start = time()
-            state = np.zeros(2**N)
-            state[0] = 1
-            state[-1] = 1
-            state = state / np.sqrt(2)
-            state = to_approx_MPS(state, N=N, d=2, chi=x)
+
             result = qft_circuit_swap_approx(state, N, chi=x)
-            result = to_dense(result).flatten()
+            #result = to_dense(result).flatten()
             times.append( time()-start )
 
         time_chis[i, j, :] = ([np.mean(times), np.std(times) ])
@@ -388,27 +407,26 @@ time_chis_quimb = np.zeros( (len(chis), len(Ns), 2) )
 for i, x in enumerate(tqdm(chis)):
     for j, n in enumerate(Ns):
         times = []
+        #GHZ initial state
+        state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
         for _ in range(50):
             start = time()
-            #GHZ initial state
-            state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
-
+        
             qc = QuantumCircuit(n)
             qft_circuit_qiskit(qc, n)
             psi0 = MPS_circ(qc, gates, init_state=state, chi=x)
-            psi_dense = psi0.to_dense()
+            #psi_dense = psi0.to_dense()
 
             times.append( time()-start )
 
         time_chis_quimb[i, j, :] = ([np.mean(times), np.std(times) ])
-
 ```
 
 #### Save/load data
 
 ```{python}
-# np.save("time_chis_quimb", time_chis_quimb)
-# np.save("time_chis", time_chis)
+np.save(".\\data\\time_chis_quimb", time_chis_quimb)
+np.save(".\\data\\time_chis", time_chis)
 
 time_chis = np.load(".\\data\\time_chis.npy")
 time_chis_quimb = np.load(".\\data\\time_chis_quimb.npy")
@@ -430,7 +448,6 @@ y_q   = time_chis_quimb.transpose(1,0,2)
 
 y_man = np.append(times_manual_chi.reshape(1,13,2).transpose(1,0,2), y_man, axis=1)
 y_q = np.append(times_quimb_approx.reshape(1,13,2).transpose(1,0,2), y_q, axis=1)
-
 ```
 
 ```{python}
@@ -485,23 +502,21 @@ times_manual_tot = np.zeros( (len(N_man_tot), 2) )
 
 for i,n in enumerate(tqdm(N_man_tot)):
     times = []
+    
+    #GHZ initial state
+    state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+    mps = [s.data for s in state]
+    state = [mps[0]] + [s.transpose(0,2,1) for s in mps[1:-1]] + [mps[-1]]
+        
     for _ in range(10):
         start = time()
-        #GHZ initial state
-        state = np.zeros(2**n)
-        state[0] = 1
-        state[-1] = 1
-        state = state / np.sqrt(2)
-        
-        state = to_approx_MPS(state, N=n, d=2, chi=2)
+
         result = qft_circuit_swap_approx(state, n, chi=2)
-        result = to_dense(result).flatten()
+        #result = to_dense(result).flatten()
         
         times.append( time()-start )
         
     times_manual_tot[i,:] = ( [np.mean(times), np.std(times) ]) 
-    
-
 ```
 
 ### Quimb - authomatic $\chi$
@@ -515,10 +530,12 @@ times_quimb_auto = np.zeros( (len(N_tot), 2) )
 
 for i, n in enumerate(tqdm(N_tot)):
     times = []
+    
+    #GHZ initial state
+    state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+    
     for _ in range(10):
-        start = time()
-        #GHZ initial state
-        state = quimb.tensor.tensor_gen.MPS_ghz_state(n) 
+        start = time()    
         
         qc = QuantumCircuit(n)
         qft_circuit_qiskit(qc, n)
@@ -542,10 +559,12 @@ times_qiskit = np.zeros( (len(N_qiskit), 2) )
 
 for i, n in enumerate(tqdm(N_qiskit)):
     times = []
+    
+    #GHZ initial state
+    state = get_ghz_simple(n, measure=False)
     for _ in range(10):
         start = time()
-        #GHZ initial state
-        state = get_ghz_simple(n, measure=False)
+        
         #QFT circuit
         qc = QuantumCircuit(n)
         qft_circuit_qiskit(qc, n)
@@ -599,13 +618,16 @@ times_cirq = np.zeros( (len(N_cirq), 2) )
 
 for i, n in enumerate(tqdm(N_cirq)):
     times = []
+    
+    #GHZ initial state
+    state = np.zeros(2**n)
+    state[0] = 1
+    state[-1] = 1
+    state = state / np.sqrt(2)
+        
     for _ in range(10):
         start = time()
-        #GHZ initial state
-        state = np.zeros(2**n)
-        state[0] = 1
-        state[-1] = 1
-        state = state / np.sqrt(2)
+        
         #QFT circuit
         qubits = cirq.LineQubit.range(n)
         qc = qft_circuit_cirq(qubits, [])
