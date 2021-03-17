@@ -1,7 +1,12 @@
 # QFT
 Final project for the course of Quantum Information and Computing for the Master's Degree in Physics of Data @ Università degli Studi di Padova. 
 
-The main results are shown in \(3\) Jupyter Notebooks, saved in the R-Markdown (`.Rmd`) format:
+The main results are shown in \(3\) Jupyter Notebooks, saved in the R-Markdown (`.Rmd`) format. To use them instead of the `.ipynb` files install jupytext as follows:
+```
+pip install jupytext
+jupyter notebook --generate-config
+```
+The notebooks are the following:
 1. `01_cirq-Qiskit_QFT.Rmd` contains implementations for the Quantum Fourier Transform (QFT) circuit in the `Cirq` and `Qiskit` libraries for quantum computing.
 2. `02_ManualMPS_QFT.Rmd` shows how to convert quantum states from a dense representation to the Matrix Product States with Open Boundary Conditions (MPS-OBC) representation "manually", i.e. without using external libraries for tensor networks. Functions for applying 1 or 2-qubit quantum gates to an MPS are provided. This allows applying the QFT to MPS using Time Evolving Block Decimation (TEBD) methods. The result is then compared to that obtained from the tensor library `quimb`.
 3. `03_Qiskit2MPS.Rmd` contains a custom interface that can convert simple quantum circuits programmed in `Qiskit` to their `Quimb` analogues, so that they can be immediately applied to MPS. We use again a QFT implementation as an example for such procedure.
